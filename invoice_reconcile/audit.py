@@ -592,12 +592,30 @@ class AuditManager:
         conflict_mode: str = "ask",
         apply_config: bool = False,
         current_config: Optional[Config] = None,
+        compare_session: Optional[Session] = None,
+        save_precheck: bool = True,
     ) -> Dict[str, Any]:
         path = Path(filename_or_path)
         if not path.exists():
             path = self._audit_archive_path(filename_or_path)
         if not path.exists():
             raise FileNotFoundError(f"审计包不存在: {filename_or_path}")
+
+        effective_conflict = conflict_mode if conflict_mode != "ask" else "reject"
+
+        precheck_result = self.precheck(
+            str(path),
+            sm,
+            target_session_name=target_session_name,
+            conflict_mode=effective_conflict,
+            apply_config=apply_config,
+            current_config=current_config,
+            compare_session=compare_session,
+        )
+
+        if save_precheck:
+            precheck_store = PrecheckStore()
+            precheck_store.save(precheck_result)
 
         pkg = self._load_archive(path)
 
@@ -675,6 +693,25 @@ class AuditManager:
         new_session.created_at = pkg.session_data.get("created_at", new_session.created_at)
         new_session.updated_at = _now_iso()
 
+        precheck_summary = {
+            "precheck_id": precheck_result.precheck_id,
+            "version_ok": precheck_result.version_ok,
+            "content_hash_valid": precheck_result.content_hash_valid,
+            "config_drift_count": len(precheck_result.config_drift),
+            "missing_config_keys": precheck_result.missing_config_keys,
+            "duplicate_source_count": len(precheck_result.duplicate_sources.get("both", [])),
+            "session_existed_before": precheck_result.session_exists,
+            "final_conflict_resolution": (
+                "overwrite" if overwritten else
+                "rename" if renamed else
+                "reject" if precheck_result.will_reject else
+                "new_session"
+            ),
+            "final_session_name": desired_name,
+            "warnings_count": len(precheck_result.warnings),
+            "errors_count": len(precheck_result.errors),
+        }
+
         sm.add_history(
             new_session,
             "audit_import",
@@ -689,6 +726,11 @@ class AuditManager:
             warnings=warnings,
             config_drift_detected=list(config_drift.keys()) if config_drift else [],
             duplicate_source_files=duplicate_sources,
+            precheck_id=precheck_result.precheck_id,
+            precheck_summary=precheck_summary,
+            final_action="overwrite" if overwritten else (
+                "rename" if renamed else "create"
+            ),
         )
 
         sm._save(new_session)
@@ -710,6 +752,8 @@ class AuditManager:
             "content_hash_valid": analysis.get("content_hash_valid", False),
             "config_drift": config_drift,
             "duplicate_sources": duplicate_sources,
+            "precheck_id": precheck_result.precheck_id,
+            "precheck_summary": precheck_summary,
         }
 
     def replay_log(
@@ -779,3 +823,294 @@ class AuditManager:
                 audit_pkg.session_data.get("imported_files", {}).get(h, h)
             )
         return result
+
+    def precheck(
+        self,
+        filename_or_path: str,
+        sm: SessionManager,
+        target_session_name: Optional[str] = None,
+        conflict_mode: str = "reject",
+        apply_config: bool = False,
+        current_config: Optional[Config] = None,
+        compare_session: Optional[Session] = None,
+    ) -> "PrecheckResult":
+        path = Path(filename_or_path)
+        if not path.exists():
+            path = self._audit_archive_path(filename_or_path)
+        if not path.exists():
+            raise FileNotFoundError(f"审计包不存在: {filename_or_path}")
+
+        precheck_id = f"precheck_{_uuid()}"
+        precheck_at = _now_iso()
+
+        errors: List[str] = []
+        warnings: List[str] = []
+
+        try:
+            pkg = self._load_archive(path)
+        except Exception as e:
+            return PrecheckResult(
+                precheck_id=precheck_id,
+                audit_file=path.name,
+                audit_path=str(path),
+                audit_id="unknown",
+                precheck_at=precheck_at,
+                target_session_name=target_session_name or "unknown",
+                conflict_mode=conflict_mode,
+                apply_config=apply_config,
+                session_exists=False,
+                resolved_name=target_session_name or "unknown",
+                will_overwrite=False,
+                will_rename=False,
+                will_reject=True,
+                rename_to="",
+                version_ok=False,
+                version_message="",
+                content_hash_valid=False,
+                config_drift={},
+                missing_config_keys=[],
+                duplicate_sources={"both": [], "target_only": [], "audit_only": []},
+                warnings=[],
+                errors=[f"审计包无法加载: {e}"],
+                importable=False,
+                summary={},
+            )
+
+        analysis = self.analyze(str(path), current_config=current_config)
+
+        version_ok = analysis.get("version_ok", False)
+        version_message = analysis.get("version_message", "")
+        content_hash_valid = analysis.get("content_hash_valid", False)
+        config_drift = analysis.get("config_drift", {})
+        missing_config_keys = analysis.get("missing_config_keys", [])
+
+        if not version_ok:
+            errors.append(f"版本不兼容: {version_message}")
+
+        if not content_hash_valid:
+            warnings.append("内容哈希校验失败，文件可能被篡改或损坏")
+
+        for w in analysis.get("warnings", []):
+            warnings.append(w)
+
+        if missing_config_keys and not apply_config:
+            warnings.append(
+                f"审计包缺少配置项: {', '.join(missing_config_keys)}，导入时将使用当前配置"
+            )
+
+        if config_drift and not apply_config:
+            drift_items = ", ".join(config_drift.keys())
+            warnings.append(
+                f"配置漂移: 以下 {len(config_drift)} 项配置与当前工作目录不同: {drift_items}"
+            )
+
+        orig_name = pkg.session_data.get("name", "restored")
+        desired_name = target_session_name or orig_name
+
+        session_exists = sm.exists(desired_name)
+        resolved_name, will_overwrite, will_rename, will_reject, rename_to = \
+            _precheck_resolve_name(desired_name, sm, conflict_mode)
+
+        if will_reject and session_exists:
+            errors.append(
+                f"会话 '{desired_name}' 已存在，冲突模式为 reject，导入将被拒绝"
+            )
+
+        duplicate_sources: Dict[str, List[str]] = {"both": [], "target_only": [], "audit_only": []}
+        if compare_session is not None:
+            duplicate_sources = self.check_duplicate_sources(compare_session, pkg)
+            if duplicate_sources["both"]:
+                warnings.append(
+                    f"发现 {len(duplicate_sources['both'])} 个重复导入来源，"
+                    f"若两边独立做过匹配，数据可能不一致"
+                )
+
+        importable = len(errors) == 0
+
+        summary = {
+            "original_session_name": orig_name,
+            "original_session_id": pkg.session_data.get("session_id", ""),
+            "invoices_count": len(pkg.session_data.get("invoices", {})),
+            "transactions_count": len(pkg.session_data.get("transactions", {})),
+            "matches_count": len(pkg.session_data.get("matches", {})),
+            "history_count": len(pkg.session_data.get("history", [])),
+            "imported_files_count": len(pkg.session_data.get("imported_files", {})),
+        }
+
+        result = PrecheckResult(
+            precheck_id=precheck_id,
+            audit_file=path.name,
+            audit_path=str(path),
+            audit_id=pkg.metadata.audit_id,
+            precheck_at=precheck_at,
+            target_session_name=desired_name,
+            conflict_mode=conflict_mode,
+            apply_config=apply_config,
+            session_exists=session_exists,
+            resolved_name=resolved_name,
+            will_overwrite=will_overwrite,
+            will_rename=will_rename,
+            will_reject=will_reject,
+            rename_to=rename_to,
+            version_ok=version_ok,
+            version_message=version_message,
+            content_hash_valid=content_hash_valid,
+            config_drift=config_drift,
+            missing_config_keys=missing_config_keys,
+            duplicate_sources=duplicate_sources,
+            warnings=warnings,
+            errors=errors,
+            importable=importable,
+            summary=summary,
+        )
+
+        return result
+
+
+PRECHECK_DIR_NAME = ".irec_prechecks"
+
+
+@dataclass
+class PrecheckResult:
+    precheck_id: str
+    audit_file: str
+    audit_path: str
+    audit_id: str
+    precheck_at: str
+    target_session_name: str
+    conflict_mode: str
+    apply_config: bool
+    session_exists: bool
+    resolved_name: str
+    will_overwrite: bool
+    will_rename: bool
+    will_reject: bool
+    rename_to: str
+    version_ok: bool
+    version_message: str
+    content_hash_valid: bool
+    config_drift: Dict[str, Any]
+    missing_config_keys: List[str]
+    duplicate_sources: Dict[str, List[str]]
+    warnings: List[str]
+    errors: List[str]
+    importable: bool
+    summary: Dict[str, Any]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PrecheckResult":
+        return cls(**data)
+
+
+class PrecheckStore:
+    def __init__(self, base_dir: Optional[str] = None):
+        self.base_dir = Path(base_dir or os.getcwd()).resolve()
+        self.precheck_dir = self.base_dir / PRECHECK_DIR_NAME
+        self.precheck_dir.mkdir(parents=True, exist_ok=True)
+
+    def _precheck_path(self, precheck_id: str) -> Path:
+        return self.precheck_dir / f"{precheck_id}.json"
+
+    def save(self, result: PrecheckResult) -> str:
+        path = self._precheck_path(result.precheck_id)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(result.to_dict(), f, ensure_ascii=False, indent=2)
+        return result.precheck_id
+
+    def load(self, precheck_id: str) -> Optional[PrecheckResult]:
+        path = self._precheck_path(precheck_id)
+        if not path.exists():
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return PrecheckResult.from_dict(data)
+        except Exception:
+            return None
+
+    def list(self) -> List[Dict[str, Any]]:
+        results = []
+        for p in sorted(self.precheck_dir.glob("*.json"), reverse=True):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                results.append({
+                    "precheck_id": data.get("precheck_id", p.stem),
+                    "audit_file": data.get("audit_file", ""),
+                    "audit_id": data.get("audit_id", ""),
+                    "precheck_at": data.get("precheck_at", ""),
+                    "target_session_name": data.get("target_session_name", ""),
+                    "importable": data.get("importable", False),
+                })
+            except Exception:
+                results.append({
+                    "precheck_id": p.stem,
+                    "audit_file": "",
+                    "audit_id": "",
+                    "precheck_at": "",
+                    "target_session_name": "",
+                    "importable": False,
+                })
+        return results
+
+    def delete(self, precheck_id: str) -> bool:
+        path = self._precheck_path(precheck_id)
+        if path.exists():
+            path.unlink()
+            return True
+        return False
+
+    def clear(self) -> int:
+        count = 0
+        for p in self.precheck_dir.glob("*.json"):
+            p.unlink()
+            count += 1
+        return count
+
+
+def _precheck_resolve_name(
+    desired_name: str,
+    sm: SessionManager,
+    conflict_mode: str,
+) -> Tuple[str, bool, bool, bool, str]:
+    exists = sm.exists(desired_name)
+    will_overwrite = False
+    will_rename = False
+    will_reject = False
+    resolved = desired_name
+    rename_to = ""
+
+    if exists:
+        if conflict_mode == "reject":
+            will_reject = True
+        elif conflict_mode == "rename":
+            will_rename = True
+            counter = 1
+            new_name = f"{desired_name}_restored"
+            while sm.exists(new_name):
+                counter += 1
+                new_name = f"{desired_name}_restored{counter}"
+            resolved = new_name
+            rename_to = new_name
+        elif conflict_mode == "overwrite":
+            will_overwrite = True
+            resolved = desired_name
+        else:
+            will_reject = True
+
+    return resolved, will_overwrite, will_rename, will_reject, rename_to
+
+
+def _detect_missing_files(pkg: AuditPackage) -> List[str]:
+    missing = []
+    manifest = pkg.manifest
+    if not manifest or "files" not in manifest:
+        return missing
+    expected_files = list(manifest["files"].keys())
+    for f in expected_files:
+        if f == AUDIT_MANIFEST:
+            continue
+    return missing

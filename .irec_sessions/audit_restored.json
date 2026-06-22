@@ -1,11 +1,11 @@
 {
-  "session_id": "513ef6bf042f",
+  "session_id": "39b9cfbf240d",
   "name": "audit_restored",
-  "created_at": "2026-06-22T12:51:36",
-  "updated_at": "2026-06-22T12:51:38",
+  "created_at": "2026-06-22T13:18:26",
+  "updated_at": "2026-06-22T13:18:29",
   "invoices": {
-    "b2a57b8a5903": {
-      "id": "b2a57b8a5903",
+    "57416030a25f": {
+      "id": "57416030a25f",
       "invoice_no": "INV-2026-001",
       "customer_name": "华为技术有限公司",
       "amount": 12500.0,
@@ -15,10 +15,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "dd7292c8f2e3": {
-      "id": "dd7292c8f2e3",
+    "cb3d0cd6b61f": {
+      "id": "cb3d0cd6b61f",
       "invoice_no": "INV-2026-002",
       "customer_name": "阿里巴巴集团",
       "amount": 8750.5,
@@ -28,10 +28,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "efeb098e5024": {
-      "id": "efeb098e5024",
+    "14ebc8d1c778": {
+      "id": "14ebc8d1c778",
       "invoice_no": "INV-2026-003",
       "customer_name": "腾讯科技",
       "amount": 33200.0,
@@ -41,10 +41,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "100c679d3a28": {
-      "id": "100c679d3a28",
+    "424757a3e473": {
+      "id": "424757a3e473",
       "invoice_no": "INV-2026-004",
       "customer_name": "字节跳动",
       "amount": 5600.75,
@@ -54,10 +54,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "11230f02b232": {
-      "id": "11230f02b232",
+    "e0abd6b088a7": {
+      "id": "e0abd6b088a7",
       "invoice_no": "INV-2026-005",
       "customer_name": "百度在线",
       "amount": 18900.0,
@@ -67,10 +67,10 @@
       "status": "unmatched",
       "suspended": true,
       "suspend_reason": "合同金额争议，等待商务确认【审计】",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "6749cd3293f7": {
-      "id": "6749cd3293f7",
+    "ad26cb2eb7f3": {
+      "id": "ad26cb2eb7f3",
       "invoice_no": "INV-2026-006",
       "customer_name": "京东集团",
       "amount": 4200.0,
@@ -80,10 +80,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "d87fe5f07926": {
-      "id": "d87fe5f07926",
+    "dcccd55bf8f4": {
+      "id": "dcccd55bf8f4",
       "invoice_no": "INV-2026-007",
       "customer_name": "美团点评",
       "amount": 7800.0,
@@ -93,10 +93,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "af23af8e41b3": {
-      "id": "af23af8e41b3",
+    "39eccf326a4c": {
+      "id": "39eccf326a4c",
       "invoice_no": "INV-2026-008",
       "customer_name": "小米科技",
       "amount": 9200.0,
@@ -106,12 +106,12 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     }
   },
   "transactions": {
-    "3702e84e0595": {
-      "id": "3702e84e0595",
+    "9ae968985c36": {
+      "id": "9ae968985c36",
       "txn_id": "TXN20260601001",
       "counterparty": "华为技术有限公司",
       "amount": 12500.0,
@@ -121,10 +121,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "d4184d3e2cac": {
-      "id": "d4184d3e2cac",
+    "bc6244d42e3a": {
+      "id": "bc6244d42e3a",
       "txn_id": "TXN20260605002",
       "counterparty": "阿里",
       "amount": 8750.5,
@@ -134,10 +134,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "b7ed19546c47": {
-      "id": "b7ed19546c47",
+    "fa99aea3b492": {
+      "id": "fa99aea3b492",
       "txn_id": "TXN20260608003",
       "counterparty": "腾讯",
       "amount": 33200.0,
@@ -147,10 +147,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "0cc6a805c5f4": {
-      "id": "0cc6a805c5f4",
+    "f33cfb8f45ed": {
+      "id": "f33cfb8f45ed",
       "txn_id": "TXN20260610004",
       "counterparty": "字节",
       "amount": 5600.75,
@@ -160,10 +160,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "ccd167149cab": {
-      "id": "ccd167149cab",
+    "027a08772c5f": {
+      "id": "027a08772c5f",
       "txn_id": "TXN20260612005",
       "counterparty": "百度",
       "amount": 9400.0,
@@ -173,10 +173,10 @@
       "status": "unmatched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "dafa2ecce901": {
-      "id": "dafa2ecce901",
+    "110d4536fc03": {
+      "id": "110d4536fc03",
       "txn_id": "TXN20260612006",
       "counterparty": "京东",
       "amount": 4200.0,
@@ -186,10 +186,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "1b5c19c588b7": {
-      "id": "1b5c19c588b7",
+    "3e1466a3bff3": {
+      "id": "3e1466a3bff3",
       "txn_id": "TXN20260618007",
       "counterparty": "美团",
       "amount": 3000.0,
@@ -199,10 +199,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "e3ff513a6264": {
-      "id": "e3ff513a6264",
+    "699bbf90e944": {
+      "id": "699bbf90e944",
       "txn_id": "TXN20260618008",
       "counterparty": "美团",
       "amount": 4800.0,
@@ -212,10 +212,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "65546a4fb320": {
-      "id": "65546a4fb320",
+    "029167198a83": {
+      "id": "029167198a83",
       "txn_id": "TXN20260620009",
       "counterparty": "小米",
       "amount": 9500.0,
@@ -225,10 +225,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     },
-    "dd7db1fd5795": {
-      "id": "dd7db1fd5795",
+    "d22cf339a236": {
+      "id": "d22cf339a236",
       "txn_id": "TXN20260622010",
       "counterparty": "网易",
       "amount": 20000.0,
@@ -238,126 +238,126 @@
       "status": "unmatched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T12:51:36"
+      "created_at": "2026-06-22T13:18:26"
     }
   },
   "matches": {
-    "6c415ed335e2": {
-      "id": "6c415ed335e2",
+    "1f3f7b67e62e": {
+      "id": "1f3f7b67e62e",
       "invoice_ids": [
-        "b2a57b8a5903"
+        "57416030a25f"
       ],
       "transaction_ids": [
-        "3702e84e0595"
+        "9ae968985c36"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:51:36",
+      "matched_at": "2026-06-22T13:18:27",
       "notes": "一对一匹配: 客户=华为技术有限公司, 金额差=0.0000, 日期差=1天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "57e3de4d27f6": {
-      "id": "57e3de4d27f6",
+    "d1704e923261": {
+      "id": "d1704e923261",
       "invoice_ids": [
-        "dd7292c8f2e3"
+        "cb3d0cd6b61f"
       ],
       "transaction_ids": [
-        "d4184d3e2cac"
+        "bc6244d42e3a"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:51:36",
+      "matched_at": "2026-06-22T13:18:27",
       "notes": "一对一匹配: 客户=阿里巴巴集团, 金额差=0.0000, 日期差=0天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "61f422eeebc2": {
-      "id": "61f422eeebc2",
+    "077a8c539794": {
+      "id": "077a8c539794",
       "invoice_ids": [
-        "efeb098e5024"
+        "14ebc8d1c778"
       ],
       "transaction_ids": [
-        "b7ed19546c47"
+        "fa99aea3b492"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:51:36",
+      "matched_at": "2026-06-22T13:18:27",
       "notes": "一对一匹配: 客户=腾讯科技, 金额差=0.0000, 日期差=1天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "bff06ca67524": {
-      "id": "bff06ca67524",
+    "74755fa3463d": {
+      "id": "74755fa3463d",
       "invoice_ids": [
-        "100c679d3a28"
+        "424757a3e473"
       ],
       "transaction_ids": [
-        "0cc6a805c5f4"
+        "f33cfb8f45ed"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:51:36",
+      "matched_at": "2026-06-22T13:18:27",
       "notes": "一对一匹配: 客户=字节跳动, 金额差=0.0000, 日期差=2天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "fe0d9a887858": {
-      "id": "fe0d9a887858",
+    "31f5fe6a4cfd": {
+      "id": "31f5fe6a4cfd",
       "invoice_ids": [
-        "6749cd3293f7"
+        "ad26cb2eb7f3"
       ],
       "transaction_ids": [
-        "dafa2ecce901"
+        "110d4536fc03"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:51:36",
+      "matched_at": "2026-06-22T13:18:27",
       "notes": "一对一匹配: 客户=京东集团, 金额差=0.0000, 日期差=1天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "b248d9b02fd9": {
-      "id": "b248d9b02fd9",
+    "3a259114a1d3": {
+      "id": "3a259114a1d3",
       "invoice_ids": [
-        "d87fe5f07926"
+        "dcccd55bf8f4"
       ],
       "transaction_ids": [
-        "1b5c19c588b7",
-        "e3ff513a6264"
+        "3e1466a3bff3",
+        "699bbf90e944"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:51:36",
+      "matched_at": "2026-06-22T13:18:27",
       "notes": "一对多匹配: 2笔流水合并, 总金额=7800.00, 发票金额=7800.00, 差额=0.0000",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "8106efe45045": {
-      "id": "8106efe45045",
+    "4bed80114cce": {
+      "id": "4bed80114cce",
       "invoice_ids": [
-        "af23af8e41b3"
+        "39eccf326a4c"
       ],
       "transaction_ids": [
-        "65546a4fb320"
+        "029167198a83"
       ],
       "match_type": "manual",
-      "matched_at": "2026-06-22T12:51:37",
+      "matched_at": "2026-06-22T13:18:27",
       "notes": "差额300元为手续费，财务确认入账【审计测试】",
       "reversed": true,
-      "reversed_at": "2026-06-22T12:51:37",
+      "reversed_at": "2026-06-22T13:18:27",
       "reversed_reason": "演示撤销【审计测试】"
     },
-    "0a59af6bcaf2": {
-      "id": "0a59af6bcaf2",
+    "b43f18f94173": {
+      "id": "b43f18f94173",
       "invoice_ids": [
-        "af23af8e41b3"
+        "39eccf326a4c"
       ],
       "transaction_ids": [
-        "65546a4fb320"
+        "029167198a83"
       ],
       "match_type": "manual",
-      "matched_at": "2026-06-22T12:51:37",
+      "matched_at": "2026-06-22T13:18:27",
       "notes": "重新匹配：差额300手续费【审计】",
       "reversed": false,
       "reversed_at": "",
@@ -366,9 +366,9 @@
   },
   "history": [
     {
-      "id": "d10002fe6c3e",
+      "id": "cbb2e2f984c8",
       "action": "import_invoices",
-      "timestamp": "2026-06-22T12:51:36",
+      "timestamp": "2026-06-22T13:18:26",
       "details": {
         "file": "invoices_good.csv",
         "count": 8,
@@ -376,9 +376,9 @@
       }
     },
     {
-      "id": "e1395c79852c",
+      "id": "a4ad8faeeff8",
       "action": "import_transactions",
-      "timestamp": "2026-06-22T12:51:36",
+      "timestamp": "2026-06-22T13:18:26",
       "details": {
         "file": "transactions_good.csv",
         "count": 10,
@@ -386,27 +386,27 @@
       }
     },
     {
-      "id": "f202e0d97ce7",
+      "id": "aa30bce52c21",
       "action": "auto_match",
-      "timestamp": "2026-06-22T12:51:36",
+      "timestamp": "2026-06-22T13:18:27",
       "details": {
         "matched_count": 6,
         "invoice_ids_used": [
-          "100c679d3a28",
-          "6749cd3293f7",
-          "b2a57b8a5903",
-          "d87fe5f07926",
-          "dd7292c8f2e3",
-          "efeb098e5024"
+          "14ebc8d1c778",
+          "424757a3e473",
+          "57416030a25f",
+          "ad26cb2eb7f3",
+          "cb3d0cd6b61f",
+          "dcccd55bf8f4"
         ],
         "transaction_ids_used": [
-          "0cc6a805c5f4",
-          "1b5c19c588b7",
-          "3702e84e0595",
-          "b7ed19546c47",
-          "d4184d3e2cac",
-          "dafa2ecce901",
-          "e3ff513a6264"
+          "110d4536fc03",
+          "3e1466a3bff3",
+          "699bbf90e944",
+          "9ae968985c36",
+          "bc6244d42e3a",
+          "f33cfb8f45ed",
+          "fa99aea3b492"
         ],
         "config": {
           "amount_tolerance": 0.01,
@@ -415,16 +415,16 @@
       }
     },
     {
-      "id": "30891654b0b6",
+      "id": "aad440f1f963",
       "action": "manual_match",
-      "timestamp": "2026-06-22T12:51:37",
+      "timestamp": "2026-06-22T13:18:27",
       "details": {
-        "match_id": "8106efe45045",
+        "match_id": "4bed80114cce",
         "invoice_ids": [
-          "af23af8e41b3"
+          "39eccf326a4c"
         ],
         "transaction_ids": [
-          "65546a4fb320"
+          "029167198a83"
         ],
         "invoice_nos": [
           "INV-2026-008"
@@ -439,42 +439,42 @@
       }
     },
     {
-      "id": "0bc7ee1d217a",
+      "id": "979d514484f9",
       "action": "suspend_invoice",
-      "timestamp": "2026-06-22T12:51:37",
+      "timestamp": "2026-06-22T13:18:27",
       "details": {
-        "invoice_id": "11230f02b232",
+        "invoice_id": "e0abd6b088a7",
         "invoice_no": "INV-2026-005",
         "reason": "合同金额争议，等待商务确认【审计】"
       }
     },
     {
-      "id": "36874b27e308",
+      "id": "c72f53be3b85",
       "action": "reverse_match",
-      "timestamp": "2026-06-22T12:51:37",
+      "timestamp": "2026-06-22T13:18:27",
       "details": {
-        "match_id": "8106efe45045",
+        "match_id": "4bed80114cce",
         "match_type": "manual",
         "invoice_ids": [
-          "af23af8e41b3"
+          "39eccf326a4c"
         ],
         "transaction_ids": [
-          "65546a4fb320"
+          "029167198a83"
         ],
         "reason": "演示撤销【审计测试】"
       }
     },
     {
-      "id": "ecf4c268dc4e",
+      "id": "df2a2c3c2f18",
       "action": "manual_match",
-      "timestamp": "2026-06-22T12:51:37",
+      "timestamp": "2026-06-22T13:18:27",
       "details": {
-        "match_id": "0a59af6bcaf2",
+        "match_id": "b43f18f94173",
         "invoice_ids": [
-          "af23af8e41b3"
+          "39eccf326a4c"
         ],
         "transaction_ids": [
-          "65546a4fb320"
+          "029167198a83"
         ],
         "invoice_nos": [
           "INV-2026-008"
@@ -489,20 +489,20 @@
       }
     },
     {
-      "id": "646c80e8b690",
+      "id": "c47be20b0e35",
       "action": "audit_export",
-      "timestamp": "2026-06-22T12:51:38",
+      "timestamp": "2026-06-22T13:18:28",
       "details": {
-        "audit_id": "audit_5ef9d2414c92",
+        "audit_id": "audit_fcf08171fe04",
         "audit_file": "audit_A_full.irecaudit",
         "audit_version": "1.0",
         "notes": "A类回归测试-完整审计包",
         "operator": "tester_01",
         "summary_snapshot": {
-          "session_id": "174064e9138d",
+          "session_id": "5c5faca28359",
           "name": "audit_source",
-          "created_at": "2026-06-22T12:51:36",
-          "updated_at": "2026-06-22T12:51:37",
+          "created_at": "2026-06-22T13:18:26",
+          "updated_at": "2026-06-22T13:18:27",
           "invoices": {
             "total": 8,
             "matched": 7,
@@ -530,16 +530,16 @@
       }
     },
     {
-      "id": "7c238f3e9889",
+      "id": "3c2f9e5ae187",
       "action": "audit_import",
-      "timestamp": "2026-06-22T12:51:38",
+      "timestamp": "2026-06-22T13:18:29",
       "details": {
-        "source_audit_id": "audit_5ef9d2414c92",
+        "source_audit_id": "audit_fcf08171fe04",
         "source_audit_file": "audit_A_full.irecaudit",
         "original_session_name": "audit_source",
-        "original_session_id": "174064e9138d",
+        "original_session_id": "5c5faca28359",
         "target_session_name": "audit_restored",
-        "target_session_id": "513ef6bf042f",
+        "target_session_id": "39b9cfbf240d",
         "conflict_mode": "ask",
         "apply_config": false,
         "warnings": [],
@@ -547,12 +547,27 @@
         "duplicate_source_files": [
           "0e5c4d09162d75fffc3b898d858dfdce26fce0f9c3df35abe4ab1f5b65701ac4",
           "544b29c885141a96d4c4b0f9811453e42a24c92d1a94ced22280105ead29346d"
-        ]
+        ],
+        "precheck_id": "precheck_b2525444806b",
+        "precheck_summary": {
+          "precheck_id": "precheck_b2525444806b",
+          "version_ok": true,
+          "content_hash_valid": true,
+          "config_drift_count": 0,
+          "missing_config_keys": [],
+          "duplicate_source_count": 0,
+          "session_existed_before": false,
+          "final_conflict_resolution": "new_session",
+          "final_session_name": "audit_restored",
+          "warnings_count": 0,
+          "errors_count": 0
+        },
+        "final_action": "create"
       }
     }
   ],
   "imported_files": {
-    "0e5c4d09162d75fffc3b898d858dfdce26fce0f9c3df35abe4ab1f5b65701ac4": "invoices_good.csv @ 2026-06-22T12:51:36",
-    "544b29c885141a96d4c4b0f9811453e42a24c92d1a94ced22280105ead29346d": "transactions_good.csv @ 2026-06-22T12:51:36"
+    "0e5c4d09162d75fffc3b898d858dfdce26fce0f9c3df35abe4ab1f5b65701ac4": "invoices_good.csv @ 2026-06-22T13:18:26",
+    "544b29c885141a96d4c4b0f9811453e42a24c92d1a94ced22280105ead29346d": "transactions_good.csv @ 2026-06-22T13:18:26"
   }
 }

@@ -1,0 +1,41 @@
+{
+  "precheck_id": "precheck_2c79341f1445",
+  "audit_file": "audit_A_full.irecaudit",
+  "audit_path": "D:\\workSpace\\AI__SPACE\\zyx-00129\\.irec_audits\\audit_A_full.irecaudit",
+  "audit_id": "audit_fcf08171fe04",
+  "precheck_at": "2026-06-22T13:22:55",
+  "target_session_name": "reviewer_precheck_ok",
+  "conflict_mode": "reject",
+  "apply_config": false,
+  "session_exists": false,
+  "resolved_name": "reviewer_precheck_ok",
+  "will_overwrite": false,
+  "will_rename": false,
+  "will_reject": false,
+  "rename_to": "",
+  "version_ok": true,
+  "version_message": "",
+  "content_hash_valid": true,
+  "config_drift": {},
+  "missing_config_keys": [],
+  "duplicate_sources": {
+    "both": [],
+    "target_only": [],
+    "audit_only": [
+      "transactions_good.csv @ 2026-06-22T13:18:26",
+      "invoices_good.csv @ 2026-06-22T13:18:26"
+    ]
+  },
+  "warnings": [],
+  "errors": [],
+  "importable": true,
+  "summary": {
+    "original_session_name": "audit_source",
+    "original_session_id": "5c5faca28359",
+    "invoices_count": 8,
+    "transactions_count": 10,
+    "matches_count": 8,
+    "history_count": 8,
+    "imported_files_count": 2
+  }
+}

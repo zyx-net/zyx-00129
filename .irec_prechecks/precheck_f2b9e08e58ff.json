@@ -1,0 +1,43 @@
+{
+  "precheck_id": "precheck_f2b9e08e58ff",
+  "audit_file": "audit_A_full.irecaudit",
+  "audit_path": "D:\\workSpace\\AI__SPACE\\zyx-00129\\.irec_audits\\audit_A_full.irecaudit",
+  "audit_id": "audit_fcf08171fe04",
+  "precheck_at": "2026-06-22T13:18:36",
+  "target_session_name": "cmd_hint_test",
+  "conflict_mode": "overwrite",
+  "apply_config": true,
+  "session_exists": false,
+  "resolved_name": "cmd_hint_test",
+  "will_overwrite": false,
+  "will_rename": false,
+  "will_reject": false,
+  "rename_to": "",
+  "version_ok": true,
+  "version_message": "",
+  "content_hash_valid": true,
+  "config_drift": {},
+  "missing_config_keys": [],
+  "duplicate_sources": {
+    "both": [
+      "transactions_good.csv @ 2026-06-22T13:18:26 <-> transactions_good.csv @ 2026-06-22T13:18:26",
+      "invoices_good.csv @ 2026-06-22T13:18:26 <-> invoices_good.csv @ 2026-06-22T13:18:26"
+    ],
+    "target_only": [],
+    "audit_only": []
+  },
+  "warnings": [
+    "发现 2 个重复导入来源，若两边独立做过匹配，数据可能不一致"
+  ],
+  "errors": [],
+  "importable": true,
+  "summary": {
+    "original_session_name": "audit_source",
+    "original_session_id": "5c5faca28359",
+    "invoices_count": 8,
+    "transactions_count": 10,
+    "matches_count": 8,
+    "history_count": 8,
+    "imported_files_count": 2
+  }
+}

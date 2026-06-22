@@ -583,7 +583,10 @@ def audit_export(filename, notes, operator, session_name):
 @click.option("--auto-rename", is_flag=True, help="同名会话存在时自动重命名（另存新副本）")
 @click.option("--apply-config", is_flag=True, help="同时恢复审计包中的配置到当前工作目录")
 @click.option("--switch", "do_switch", is_flag=True, help="导入后切换到新会话")
-def audit_import(audit_file, as_name, overwrite, reject, auto_rename, apply_config, do_switch):
+@click.option("--compare-session", "-c", "compare_session_name", default=None,
+              help="指定会话进行来源重复对比，默认当前会话")
+def audit_import(audit_file, as_name, overwrite, reject, auto_rename, apply_config, do_switch,
+                 compare_session_name):
     cfg, sm = _load_cfg_and_sm()
     audit_mgr = AuditManager()
 
@@ -639,6 +642,13 @@ def audit_import(audit_file, as_name, overwrite, reject, auto_rename, apply_conf
             click.echo("[已取消] 因完整性校验失败而终止")
             return
 
+    compare_sess = None
+    if compare_session_name:
+        try:
+            compare_sess = sm.load(compare_session_name)
+        except FileNotFoundError:
+            raise click.ClickException(f"对比会话不存在: {compare_session_name}")
+
     try:
         result = audit_mgr.import_audit(
             audit_file, sm,
@@ -646,6 +656,8 @@ def audit_import(audit_file, as_name, overwrite, reject, auto_rename, apply_conf
             conflict_mode=conflict_mode,
             apply_config=apply_config,
             current_config=cfg,
+            compare_session=compare_sess,
+            save_precheck=True,
         )
     except FileExistsError as e:
         raise click.ClickException(str(e))
@@ -658,6 +670,7 @@ def audit_import(audit_file, as_name, overwrite, reject, auto_rename, apply_conf
     click.echo(f"[OK] 审计包已导入为会话 '{result['session_name']}'")
     click.echo(f"  新会话ID      : {result['session_id']}")
     click.echo(f"  来源审计包ID  : {result['audit_id']}")
+    click.echo(f"  预检ID        : {result.get('precheck_id', 'N/A')}")
     click.echo(f"  原会话        : {result['original_session_name']} (ID: {result['original_session_id']})")
     if result["overwritten"]:
         click.echo(f"  [!!]          : 已覆盖已存在的同名会话")
@@ -871,6 +884,239 @@ def audit_check_sources(audit_file, session_name):
     click.echo()
     click.echo(f"仅在审计包中导入的文件: {len(audit_only)} 个")
     click.echo(f"仅在目标会话中导入的文件: {len(sess_only)} 个")
+
+
+@audit.command("precheck", help="导入预检：不落库检测重名、冲突模式、配置漂移、缺失文件、版本兼容、重复来源等风险")
+@click.argument("audit_file")
+@click.option("--as", "as_name", default=None, help="目标会话名称，默认使用审计包原会话名")
+@click.option("--overwrite", is_flag=True, help="同名会话存在时覆盖（危险）")
+@click.option("--reject", is_flag=True, help="同名会话存在时拒绝（默认行为）")
+@click.option("--auto-rename", is_flag=True, help="同名会话存在时自动重命名（另存新副本）")
+@click.option("--apply-config", is_flag=True, help="同时恢复审计包中的配置到当前工作目录")
+@click.option("--compare-session", "-c", "compare_session_name", default=None,
+              help="指定会话进行来源重复对比，默认当前会话")
+@click.option("--save/--no-save", default=True, help="是否保存预检结果（默认保存，跨重启可查）")
+def audit_precheck(audit_file, as_name, overwrite, reject, auto_rename,
+                   apply_config, compare_session_name, save):
+    from .audit import PrecheckStore, PrecheckResult
+    cfg, sm = _load_cfg_and_sm()
+    audit_mgr = AuditManager()
+
+    conflict_count = sum([overwrite, reject, auto_rename])
+    if conflict_count > 1:
+        raise click.ClickException("--overwrite / --reject / --auto-rename 三选一，不能同时指定")
+    if overwrite:
+        conflict_mode = "overwrite"
+    elif reject:
+        conflict_mode = "reject"
+    elif auto_rename:
+        conflict_mode = "rename"
+    else:
+        conflict_mode = "reject"
+
+    compare_sess = None
+    if compare_session_name:
+        try:
+            compare_sess = sm.load(compare_session_name)
+        except FileNotFoundError:
+            raise click.ClickException(f"对比会话不存在: {compare_session_name}")
+    else:
+        curr = _get_current_session()
+        if curr and sm.exists(curr):
+            compare_sess = sm.load(curr)
+
+    try:
+        result = audit_mgr.precheck(
+            audit_file, sm,
+            target_session_name=as_name,
+            conflict_mode=conflict_mode,
+            apply_config=apply_config,
+            current_config=cfg,
+            compare_session=compare_sess,
+        )
+    except FileNotFoundError:
+        raise click.ClickException(f"审计包不存在: {audit_file}")
+    except ValueError as e:
+        raise click.ClickException(f"预检失败: {e}")
+
+    if save:
+        store = PrecheckStore()
+        store.save(result)
+
+    _print_precheck_result(result)
+
+
+@audit.command("precheck-list", help="列出已保存的预检结果（跨重启可查）")
+def audit_precheck_list():
+    from .audit import PrecheckStore
+    store = PrecheckStore()
+    results = store.list()
+    if not results:
+        click.echo("(暂无预检记录，使用 `irec audit precheck <审计包>` 创建)")
+        return
+    click.echo(f"预检记录存储目录: {store.precheck_dir}")
+    click.echo()
+    click.echo(f"{'预检ID':<24} {'审计包':<30} {'预检时间':<20} {'目标会话':<24} 可导入")
+    click.echo("-" * 128)
+    for r in results[:20]:
+        tag = "✓" if r.get("importable") else "✗"
+        click.echo(
+            f"{r.get('precheck_id', '')[:24]:<24} "
+            f"{r.get('audit_file', '')[:30]:<30} "
+            f"{r.get('precheck_at', '')[:20]:<20} "
+            f"{r.get('target_session_name', '')[:24]:<24} "
+            f"  {tag}"
+        )
+    if len(results) > 20:
+        click.echo(f"... 等共 {len(results)} 条记录")
+
+
+@audit.command("precheck-show", help="查看指定预检结果的详细信息")
+@click.argument("precheck_id")
+def audit_precheck_show(precheck_id):
+    from .audit import PrecheckStore
+    store = PrecheckStore()
+    result = store.load(precheck_id)
+    if not result:
+        raise click.ClickException(f"预检记录不存在: {precheck_id}")
+    _print_precheck_result(result)
+
+
+@audit.command("precheck-clear", help="清空所有已保存的预检结果")
+@click.option("--yes", is_flag=True, help="跳过确认")
+def audit_precheck_clear(yes):
+    from .audit import PrecheckStore
+    store = PrecheckStore()
+    if not yes:
+        click.confirm("确定清空所有预检结果？此操作不可恢复", abort=True)
+    count = store.clear()
+    click.echo(f"[OK] 已清空 {count} 条预检记录")
+
+
+def _print_precheck_result(result):
+    from .audit import PrecheckResult
+    click.echo()
+    click.echo(f"═══════════════════════════════════════════════════════════════")
+    click.echo(f"  导入预检报告")
+    click.echo(f"═══════════════════════════════════════════════════════════════")
+    click.echo(f"  预检ID        : {result.precheck_id}")
+    click.echo(f"  预检时间      : {result.precheck_at}")
+    click.echo(f"  审计包文件    : {result.audit_file}")
+    click.echo(f"  审计包ID      : {result.audit_id}")
+    click.echo(f"  目标会话名    : {result.target_session_name}")
+    click.echo(f"  冲突模式      : {result.conflict_mode}")
+    click.echo(f"  应用配置      : {'是' if result.apply_config else '否'}")
+    click.echo(f"───────────────────────────────────────────────────────────────")
+
+    status = "✓ 可以导入" if result.importable else "✗ 无法导入"
+    status_color = "green" if result.importable else "red"
+    click.echo(f"  预检结论      : {status}")
+    click.echo()
+
+    click.echo(f"  ▶ 会话冲突分析")
+    if result.session_exists:
+        click.echo(f"    目标会话已存在: 是")
+        if result.will_overwrite:
+            click.echo(f"    处理方式: 覆盖（overwrite）→ 现有会话数据将被替换")
+        elif result.will_rename:
+            click.echo(f"    处理方式: 自动重命名（auto-rename）→ 另存为新副本")
+            click.echo(f"    重命名为: {result.rename_to}")
+        elif result.will_reject:
+            click.echo(f"    处理方式: 拒绝（reject）→ 导入将被中止")
+        else:
+            click.echo(f"    处理方式: 未知")
+    else:
+        click.echo(f"    目标会话已存在: 否")
+        click.echo(f"    处理方式: 创建新会话")
+    click.echo(f"    最终会话名: {result.resolved_name}")
+    click.echo()
+
+    click.echo(f"  ▶ 版本与完整性检查")
+    ver_tag = "✓ 兼容" if result.version_ok else f"✗ {result.version_message}"
+    click.echo(f"    版本兼容性  : {ver_tag}")
+    hash_tag = "✓ 通过" if result.content_hash_valid else "✗ 失败（文件可能被篡改）"
+    click.echo(f"    完整性哈希  : {hash_tag}")
+    click.echo()
+
+    click.echo(f"  ▶ 配置检查")
+    if result.missing_config_keys:
+        click.echo(f"    缺失配置项  : {len(result.missing_config_keys)} 项")
+        for k in result.missing_config_keys:
+            click.echo(f"      - {k}")
+    else:
+        click.echo(f"    配置完整性  : ✓ 完整")
+
+    if result.config_drift:
+        drift = result.config_drift
+        click.echo(f"    配置漂移    : {len(drift)} 项与当前工作目录不同")
+        for k, v in drift.items():
+            click.echo(f"      - {k}:")
+            click.echo(f"        审计包  : {v['audit']}")
+            click.echo(f"        当前    : {v['current']}")
+        if not result.apply_config:
+            click.echo(f"    提示       : 导入时将使用当前配置（加 --apply-config 可恢复审计包配置）")
+    else:
+        click.echo(f"    配置漂移    : ✓ 与当前配置一致")
+    click.echo()
+
+    dup = result.duplicate_sources
+    click.echo(f"  ▶ 重复导入来源检查")
+    if dup.get("both"):
+        click.echo(f"    重复来源    : {len(dup['both'])} 个（两边都导入过相同文件）")
+        for item in dup["both"][:5]:
+            click.echo(f"      • {item}")
+        if len(dup["both"]) > 5:
+            click.echo(f"      ... 等共 {len(dup['both'])} 个")
+        click.echo(f"    注意       : 若两边独立做过匹配操作，数据可能不一致")
+        click.echo(f"    建议       : 导入后仔细核对未匹配列表和匹配记录")
+    else:
+        click.echo(f"    重复来源    : ✓ 未发现重复导入来源")
+    click.echo(f"    仅审计包    : {len(dup.get('audit_only', []))} 个文件")
+    click.echo(f"    仅目标会话  : {len(dup.get('target_only', []))} 个文件")
+    click.echo()
+
+    s = result.summary
+    if s:
+        click.echo(f"  ▶ 数据概览")
+        click.echo(f"    原会话名    : {s.get('original_session_name', '?')}")
+        click.echo(f"    原会话ID    : {s.get('original_session_id', '?')}")
+        click.echo(f"    发票数      : {s.get('invoices_count', 0)}")
+        click.echo(f"    流水数      : {s.get('transactions_count', 0)}")
+        click.echo(f"    匹配记录    : {s.get('matches_count', 0)}")
+        click.echo(f"    历史操作    : {s.get('history_count', 0)}")
+        click.echo(f"    来源文件    : {s.get('imported_files_count', 0)}")
+        click.echo()
+
+    if result.warnings:
+        click.echo(f"  ▶ 警告 ({len(result.warnings)} 条)")
+        for w in result.warnings:
+            click.echo(f"    ⚠ {w}")
+        click.echo()
+
+    if result.errors:
+        click.echo(f"  ▶ 错误 ({len(result.errors)} 条)")
+        for e in result.errors:
+            click.echo(f"    ✗ {e}")
+        click.echo()
+
+    click.echo(f"═══════════════════════════════════════════════════════════════")
+
+    if result.importable:
+        import_cmd = f"irec audit import \"{result.audit_file}\""
+        if result.target_session_name:
+            import_cmd += f" --as \"{result.target_session_name}\""
+        if result.conflict_mode == "overwrite":
+            import_cmd += " --overwrite"
+        elif result.conflict_mode == "rename":
+            import_cmd += " --auto-rename"
+        if result.apply_config:
+            import_cmd += " --apply-config"
+        click.echo(f"  执行导入: {import_cmd}")
+    else:
+        click.echo(f"  建议: 请先解决上述错误后再尝试导入")
+
+    click.echo(f"═══════════════════════════════════════════════════════════════")
+    click.echo()
 
 
 # ============================================================

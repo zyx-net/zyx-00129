@@ -525,7 +525,7 @@ assert_true("版本不兼容" in out or "主版本" in out,
             "D3: 版本不兼容审计包导入被明确拒绝（含原因说明）")
 
 # D4: 重复来源检测
-from invoice_reconcile.audit import AuditManager
+from invoice_reconcile.audit import AuditManager, PrecheckStore
 audit_mgr = AuditManager()
 analysis = audit_mgr.analyze("audit_A_full.irecaudit", current_config=cfg_modified)
 dup_count = len(analysis.get("imported_file_hashes", []))
@@ -653,6 +653,204 @@ assert_true("history" in sess_data, "G6: 会话数据包含 history")
 assert_true("imported_files" in sess_data, "G6: 会话数据包含 imported_files")
 
 
+print()
+print("=" * 70)
+print("[H] 导入预检功能测试（不落库 / 持久化 / 跨重启）")
+print("=" * 70)
+
+# H0: 先清理旧的预检记录
+run(["audit", "precheck-clear", "--yes"])
+
+# H1: 导出后预检 - 无冲突场景
+SESS_PRECHECK_NEW = "precheck_new_session"
+res, out = run(["audit", "precheck", "audit_A_full.irecaudit",
+                "--as", SESS_PRECHECK_NEW, "--reject"])
+assert_true("导入预检报告" in out, "H1: precheck 命令输出预检报告标题")
+assert_true("预检结论" in out and "可以导入" in out,
+            "H1: 无冲突场景下预检结论为可以导入")
+assert_true("会话冲突分析" in out, "H1: 包含会话冲突分析")
+assert_true("版本与完整性检查" in out, "H1: 包含版本与完整性检查")
+assert_true("配置检查" in out, "H1: 包含配置检查")
+assert_true("重复导入来源检查" in out, "H1: 包含重复导入来源检查")
+assert_true("数据概览" in out, "H1: 包含数据概览")
+assert_true("目标会话已存在: 否" in out, "H1: 目标会话不存在")
+assert_true("处理方式: 创建新会话" in out, "H1: 处理方式为创建新会话")
+assert_true("版本兼容性" in out and "兼容" in out, "H1: 版本兼容性检查通过")
+assert_true("完整性哈希" in out and "通过" in out, "H1: 完整性哈希校验通过")
+assert_true(f"最终会话名: {SESS_PRECHECK_NEW}" in out, "H1: 最终会话名正确")
+
+# H2: 验证预检不落库（会话未被创建）
+assert_true(not sm_r.exists(SESS_PRECHECK_NEW),
+            "H2: 预检不落库 - 目标会话未被创建")
+
+# H3: 预检持久化验证 - precheck-list 和 precheck-show
+res, out = run(["audit", "precheck-list"])
+assert_true("预检记录存储目录" in out, "H3: precheck-list 输出存储目录")
+assert_true("audit_A_full.irecaudit" in out, "H3: precheck-list 包含刚保存的预检记录")
+assert_true(SESS_PRECHECK_NEW in out, "H3: precheck-list 显示目标会话名")
+
+# 从 list 输出中提取预检 ID
+precheck_id_h1 = None
+for line in out.split("\n"):
+    if "audit_A_full.irecaudit" in line and "precheck_" in line:
+        parts = line.strip().split()
+        if parts and parts[0].startswith("precheck_"):
+            precheck_id_h1 = parts[0]
+            break
+assert_true(precheck_id_h1 is not None, f"H3: 从列表中提取到预检ID: {precheck_id_h1}")
+
+# H4: precheck-show 查看详情
+res, out = run(["audit", "precheck-show", precheck_id_h1])
+assert_true("导入预检报告" in out, "H4: precheck-show 输出预检报告")
+assert_true(precheck_id_h1 in out, "H4: precheck-show 显示正确的预检ID")
+assert_true("audit_A_full.irecaudit" in out, "H4: precheck-show 显示审计包文件名")
+
+# H5: 冲突分支 - reject 模式（会话已存在）
+# 先创建一个冲突会话
+SESS_PRECHECK_CONFLICT = "precheck_conflict"
+run(["session", "create", SESS_PRECHECK_CONFLICT])
+
+res, out = run(["audit", "precheck", "audit_A_full.irecaudit",
+                "--as", SESS_PRECHECK_CONFLICT, "--reject"])
+assert_true("无法导入" in out, "H5: reject 模式下冲突预检结论为无法导入")
+assert_true("目标会话已存在: 是" in out, "H5: 检测到目标会话已存在")
+assert_true("处理方式: 拒绝（reject）" in out, "H5: 处理方式显示为拒绝")
+assert_true("错误" in out and "已存在" in out, "H5: 错误列表中包含会话已存在信息")
+
+# H6: 冲突分支 - auto-rename 模式
+res, out = run(["audit", "precheck", "audit_A_full.irecaudit",
+                "--as", SESS_PRECHECK_CONFLICT, "--auto-rename"])
+assert_true("可以导入" in out, "H6: auto-rename 模式下预检结论为可以导入")
+assert_true("处理方式: 自动重命名（auto-rename）" in out, "H6: 处理方式为自动重命名")
+assert_true("重命名为: precheck_conflict_restored" in out, "H6: 显示重命名后的名称")
+assert_true("最终会话名: precheck_conflict_restored" in out, "H6: 最终会话名为重命名后")
+
+# 验证仍未落库
+assert_true(not sm_r.exists("precheck_conflict_restored"),
+            "H6: auto-rename 预检也不落库")
+
+# H7: 冲突分支 - overwrite 模式
+res, out = run(["audit", "precheck", "audit_A_full.irecaudit",
+                "--as", SESS_PRECHECK_CONFLICT, "--overwrite"])
+assert_true("可以导入" in out, "H7: overwrite 模式下预检结论为可以导入")
+assert_true("处理方式: 覆盖（overwrite）" in out, "H7: 处理方式为覆盖")
+assert_true("现有会话数据将被替换" in out, "H7: 提示现有数据将被替换")
+
+# H8: 配置漂移检测
+run(["config", "set", "days_tol", "10"])
+res, out = run(["audit", "precheck", "audit_A_full.irecaudit",
+                "--as", SESS_PRECHECK_NEW + "_drift", "--reject"])
+assert_true("配置漂移" in out, "H8: 预检检测到配置漂移")
+assert_true("date_tolerance_days" in out, "H8: 列出 date_tolerance_days 漂移项")
+assert_true("审计包" in out and "3" in out, "H8: 显示审计包中的值为 3")
+assert_true("当前" in out and "10" in out, "H8: 显示当前值为 10")
+assert_true("警告" in out, "H8: 配置漂移作为警告出现")
+# 恢复配置
+run(["config", "set", "days_tol", "3"])
+
+# H9: 重复来源检查
+res, out = run(["audit", "precheck", "audit_A_full.irecaudit",
+                "--as", SESS_PRECHECK_NEW + "_dup", "--reject",
+                "-c", "audit_restored"])
+assert_true("重复导入来源检查" in out, "H9: 包含重复导入来源检查")
+assert_true("重复来源" in out and "2 个" in out,
+            "H9: 检测到 2 个重复导入来源")
+assert_true("两边都导入过相同文件" in out, "H9: 提示两边都导入过相同文件")
+assert_true("仅审计包" in out, "H9: 显示仅审计包的文件数")
+assert_true("仅目标会话" in out, "H9: 显示仅目标会话的文件数")
+
+# H10: 导入后复查 - 预检 ID 写入历史
+res, out = run(["audit", "import", "audit_A_full.irecaudit",
+                "--as", "audit_precheck_imported", "--switch"])
+assert_true("预检ID" in out, "H10: 导入输出中显示预检ID")
+
+# 从输出中提取预检ID
+import_precheck_id = None
+for line in out.split("\n"):
+    if "预检ID" in line and "precheck_" in line:
+        import_precheck_id = line.split(":", 1)[1].strip()
+        break
+assert_true(import_precheck_id is not None,
+            f"H10: 从导入输出中提取到预检ID: {import_precheck_id}")
+
+# 验证历史记录中包含预检信息
+sess_imported = sm_r.load("audit_precheck_imported")
+import_hist = [h for h in sess_imported.history if h.action == "audit_import"]
+assert_true(len(import_hist) > 0, "H10: 导入会话历史中有 audit_import 记录")
+imp_details = import_hist[-1].details
+assert_true("precheck_id" in imp_details, "H10: 历史记录中包含 precheck_id")
+assert_true(imp_details["precheck_id"] == import_precheck_id,
+            "H10: 历史记录中的 precheck_id 与输出一致")
+assert_true("precheck_summary" in imp_details, "H10: 历史记录中包含 precheck_summary")
+assert_true("final_action" in imp_details, "H10: 历史记录中包含 final_action")
+
+# H11: 跨重启一致性 - 预检记录持久化
+# 先清理现有引用，模拟重启
+del sm_r, cfg_r
+import gc
+gc.collect()
+
+# 重新加载
+cfg_restart = Config.load()
+sm_restart = SessionManager(cfg_restart.session_dir)
+precheck_store = PrecheckStore()
+
+# 验证预检记录仍然存在
+all_prechecks = precheck_store.list()
+assert_true(len(all_prechecks) >= 5,
+            f"H11: 跨重启后预检记录仍然存在（实际 {len(all_prechecks)} 条）")
+
+# 验证之前保存的预检记录可以加载
+pc = precheck_store.load(precheck_id_h1)
+assert_true(pc is not None, "H11: 跨重启后可加载 H1 的预检记录")
+assert_true(pc.audit_file == "audit_A_full.irecaudit",
+            "H11: 加载的预检记录审计包名正确")
+assert_true(pc.target_session_name == SESS_PRECHECK_NEW,
+            "H11: 加载的预检记录目标会话名正确")
+assert_true(pc.importable == True, "H11: 加载的预检记录可导入标记正确")
+
+# H12: precheck-clear 清空功能
+count_before = len(precheck_store.list())
+assert_true(count_before >= 5, f"H12: 清空前有 {count_before} 条记录")
+
+run(["audit", "precheck-clear", "--yes"])
+count_after = len(precheck_store.list())
+assert_true(count_after == 0, f"H12: 清空后有 {count_after} 条记录，应为 0")
+
+# H13: 三选一参数互斥校验
+res, out = run(["audit", "precheck", "audit_A_full.irecaudit",
+                "--overwrite", "--reject", "--as", "should_fail"],
+               expect_fail=True)
+assert_true("三选一" in out or "不能同时" in out,
+            "H13: 同时指定 --overwrite 和 --reject 被参数校验拦截")
+
+# H14: 预检中包含可执行导入命令提示
+res, out = run(["audit", "precheck", "audit_A_full.irecaudit",
+                "--as", "cmd_hint_test", "--overwrite", "--apply-config"])
+assert_true("执行导入:" in out, "H14: 预检结论中包含执行导入命令")
+assert_true("cmd_hint_test" in out, "H14: 导入命令中包含目标会话名")
+assert_true("--overwrite" in out, "H14: 导入命令中包含 --overwrite")
+assert_true("--apply-config" in out, "H14: 导入命令中包含 --apply-config")
+
+# H15: 导入后用 precheck-show 可以复查同一份结论
+# 先做一次新导入
+res, out = run(["audit", "import", "audit_A_full.irecaudit",
+                "--as", "audit_review_test", "--auto-rename"])
+review_precheck_id = None
+for line in out.split("\n"):
+    if "预检ID" in line and "precheck_" in line:
+        review_precheck_id = line.split(":", 1)[1].strip()
+        break
+assert_true(review_precheck_id is not None, "H15: 获取导入时的预检ID")
+
+# 用 precheck-show 复查
+res, out = run(["audit", "precheck-show", review_precheck_id])
+assert_true("导入预检报告" in out, "H15: precheck-show 可以复查导入时的预检结论")
+assert_true(review_precheck_id in out, "H15: 复查的预检ID正确")
+assert_true("audit_A_full.irecaudit" in out, "H15: 复查的审计包正确")
+assert_true("可以导入" in out, "H15: 复查的结论为可导入")
+
+
 # ============================================================
 # 最终汇总
 # ============================================================
@@ -671,5 +869,6 @@ print("  [D] 配置漂移/配置缺失/版本不兼容/重复来源 全部正确
 print("  [E] 日志回放：只追加历史，不还原业务数据，动作类型齐全")
 print("  [F] list/info/delete 命令 + 参数互斥校验 全部正常")
 print("  [G] 归档内容：摘要、配置、明细、撤销挂起、指纹、日志、报告、会话数据 完整")
+print("  [H] 导入预检：不落库检测/三分支冲突/配置漂移/重复来源/持久化/跨重启/导入后复查")
 print("=" * 70)
 sys.exit(0)
