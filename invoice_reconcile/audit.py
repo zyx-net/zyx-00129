@@ -184,7 +184,7 @@ def _write_match_details_csv(session: Session, csv_path: str) -> None:
             "交易日期", "发票合计", "流水合计", "差额", "备注",
             "是否已撤销", "撤销时间", "撤销原因",
         ])
-        for m in sorted(session.matches.values()):
+        for m in sorted(session.matches.values(), key=lambda m: m.matched_at):
             invs = [session.invoices[i] for i in m.invoice_ids if i in session.invoices]
             txns = [session.transactions[t] for t in m.transaction_ids if t in session.transactions]
             inv_sum = sum(i.amount for i in invs)

@@ -1,0 +1,176 @@
+{
+  "session_id": "9db01f71cbda",
+  "name": "audit_replay_target",
+  "created_at": "2026-06-22T12:29:27",
+  "updated_at": "2026-06-22T12:29:27",
+  "invoices": {},
+  "transactions": {},
+  "matches": {},
+  "history": [
+    {
+      "id": "a5b987b8317a",
+      "action": "import_invoices",
+      "timestamp": "2026-06-22T12:29:27",
+      "details": {
+        "file": "invoices_good.csv",
+        "count": 8,
+        "encoding": "utf-8-sig"
+      }
+    },
+    {
+      "id": "0f539ff0c39e",
+      "action": "import_transactions",
+      "timestamp": "2026-06-22T12:29:27",
+      "details": {
+        "file": "transactions_good.csv",
+        "count": 10,
+        "encoding": "utf-8-sig"
+      }
+    },
+    {
+      "id": "18d60a973249",
+      "action": "auto_match",
+      "timestamp": "2026-06-22T12:29:27",
+      "details": {
+        "matched_count": 6,
+        "invoice_ids_used": [
+          "417cf6940832",
+          "45a2019669d6",
+          "9ed385e0d9b9",
+          "ac0c18feb063",
+          "c1e2ef54e357",
+          "dc57def03065"
+        ],
+        "transaction_ids_used": [
+          "188a08f180b4",
+          "36f724b6c881",
+          "4387724bc110",
+          "637bafe26d29",
+          "6b6605c2e06c",
+          "b40a4f80c874",
+          "f33ca6e40dea"
+        ],
+        "config": {
+          "amount_tolerance": 0.01,
+          "date_tolerance_days": 3
+        }
+      }
+    },
+    {
+      "id": "47dbac0213d3",
+      "action": "manual_match",
+      "timestamp": "2026-06-22T12:29:27",
+      "details": {
+        "match_id": "74fefc6f7fe9",
+        "invoice_ids": [
+          "a9c4c564d1ba"
+        ],
+        "transaction_ids": [
+          "b7f506350115"
+        ],
+        "invoice_nos": [
+          "INV-2026-008"
+        ],
+        "txn_ids": [
+          "TXN20260620009"
+        ],
+        "invoice_amount_sum": 9200.0,
+        "transaction_amount_sum": 9500.0,
+        "diff_amount": 300.0,
+        "notes": "差额300元为手续费，财务确认入账【审计测试】"
+      }
+    },
+    {
+      "id": "023ab1f51757",
+      "action": "suspend_invoice",
+      "timestamp": "2026-06-22T12:29:27",
+      "details": {
+        "invoice_id": "b2afbf98fc6a",
+        "invoice_no": "INV-2026-005",
+        "reason": "合同金额争议，等待商务确认【审计】"
+      }
+    },
+    {
+      "id": "44d81832800f",
+      "action": "reverse_match",
+      "timestamp": "2026-06-22T12:29:27",
+      "details": {
+        "match_id": "74fefc6f7fe9",
+        "match_type": "manual",
+        "invoice_ids": [
+          "a9c4c564d1ba"
+        ],
+        "transaction_ids": [
+          "b7f506350115"
+        ],
+        "reason": "演示撤销【审计测试】"
+      }
+    },
+    {
+      "id": "ad19af138b37",
+      "action": "manual_match",
+      "timestamp": "2026-06-22T12:29:27",
+      "details": {
+        "match_id": "fa9849f0311a",
+        "invoice_ids": [
+          "a9c4c564d1ba"
+        ],
+        "transaction_ids": [
+          "b7f506350115"
+        ],
+        "invoice_nos": [
+          "INV-2026-008"
+        ],
+        "txn_ids": [
+          "TXN20260620009"
+        ],
+        "invoice_amount_sum": 9200.0,
+        "transaction_amount_sum": 9500.0,
+        "diff_amount": 300.0,
+        "notes": "重新匹配：差额300手续费【审计】"
+      }
+    },
+    {
+      "id": "119cd490cb71",
+      "action": "audit_export",
+      "timestamp": "2026-06-22T12:29:27",
+      "details": {
+        "audit_id": "audit_ec57e47cde29",
+        "audit_file": "audit_A_full.irecaudit",
+        "audit_version": "1.0",
+        "notes": "A类回归测试-完整审计包",
+        "operator": "tester_01",
+        "summary_snapshot": {
+          "session_id": "ac0b33d3b031",
+          "name": "audit_source",
+          "created_at": "2026-06-22T12:29:21",
+          "updated_at": "2026-06-22T12:29:23",
+          "invoices": {
+            "total": 8,
+            "matched": 7,
+            "unmatched": 0,
+            "suspended": 1,
+            "amount_total": 100151.25,
+            "amount_matched": 81251.25
+          },
+          "transactions": {
+            "total": 10,
+            "matched": 8,
+            "unmatched": 2,
+            "suspended": 0,
+            "amount_total": 110951.25,
+            "amount_matched": 81551.25
+          },
+          "matches": {
+            "active": 7,
+            "reversed": 1,
+            "total": 8
+          },
+          "history_count": 7,
+          "imported_files": 2
+        }
+      }
+    }
+  ],
+  "imported_files": {}
+}

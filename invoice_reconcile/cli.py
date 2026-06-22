@@ -828,6 +828,7 @@ def audit_delete(audit_file, yes):
 @click.argument("audit_file")
 @click.option("--session", "-s", "session_name", help="指定现有会话进行对比，默认当前会话")
 def audit_check_sources(audit_file, session_name):
+    from pathlib import Path
     cfg, sm, sess = _load_session(session_name)
     audit_mgr = AuditManager()
     try:

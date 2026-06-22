@@ -2,6 +2,7 @@ README.md
 pyproject.toml
 invoice_reconcile/__init__.py
 invoice_reconcile/__main__.py
+invoice_reconcile/audit.py
 invoice_reconcile/cli.py
 invoice_reconcile/config.py
 invoice_reconcile/importer.py

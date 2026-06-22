@@ -1,0 +1,673 @@
+# -*- coding: utf-8 -*-
+"""
+审计包（Audit Package）功能回归测试
+覆盖 7 大类场景：
+  A. 导出 → 导入往返（数据一致性校验）
+  B. 跨重启恢复（重新加载会话不变）
+  C. 冲突提示（重名会话分支：拒绝/另存新副本/覆盖）
+  D. 配置漂移 + 配置缺失 + 版本不兼容 + 重复来源检测
+  E. 日志回放（replay）
+  F. list / info / delete 命令
+  G. 归档内容验证（摘要、配置、明细、撤销挂起、指纹、日志、报告、会话数据）
+"""
+import sys
+import os
+import json
+import subprocess
+import shutil
+import tempfile
+import zipfile
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+
+_cli_failed = False
+
+
+def run(args, expect_fail=False, stdin_input=None):
+    global _cli_failed
+    full = [sys.executable, "-m", "invoice_reconcile"] + list(args)
+    print(f"\n$ irec {' '.join(args)}" + (" [expect_fail]" if expect_fail else ""))
+    r = subprocess.run(
+        full, capture_output=True, text=True, encoding="utf-8",
+        input=stdin_input,
+    )
+    out = (r.stdout or "").strip()
+    err = (r.stderr or "").strip()
+    if out:
+        print(out)
+    if err:
+        print(err)
+    print(f"[exit={r.returncode}]")
+    if not expect_fail and r.returncode != 0:
+        _cli_failed = True
+    if expect_fail and r.returncode == 0:
+        _cli_failed = True
+        print(f"  [!!] 期望失败但实际成功 (exit=0)")
+    return r, out + "\n" + err
+
+
+def assert_true(cond, msg):
+    if cond:
+        print(f"[PASS] {msg}")
+    else:
+        print(f"[FAIL] {msg}")
+        raise SystemExit(1)
+
+
+def file_contains(path, text):
+    if not os.path.exists(path):
+        return False
+    with open(path, "r", encoding="utf-8") as f:
+        return text in f.read()
+
+
+# ============================================================
+# 准备工作：清理旧状态 & 初始化
+# ============================================================
+CLEAN_PATHS = [
+    ".irec_sessions",
+    ".irec_snapshots",
+    ".irec_audits",
+    ".irec_config.json",
+    ".irec_state.json",
+    "audit_irec_report",
+    "audit_irec_report.json",
+    "audit_restored_report",
+    "audit_restored_report.json",
+]
+for p in CLEAN_PATHS:
+    if os.path.isfile(p):
+        os.remove(p)
+    elif os.path.isdir(p):
+        shutil.rmtree(p, ignore_errors=True)
+
+SESS_SRC = "audit_source"
+SESS_RESTORED = "audit_restored"
+SESS_CONFLICT = "audit_conflict"
+SESS_REPLAY = "audit_replay_target"
+
+print("=" * 70)
+print("准备阶段：初始化配置并创建源会话")
+print("=" * 70)
+
+run(["init"])
+for canonical, aliases in [
+    ("华为技术有限公司", ["华为"]),
+    ("阿里巴巴集团", ["阿里"]),
+    ("腾讯科技", ["腾讯"]),
+    ("字节跳动", ["字节"]),
+    ("百度在线", ["百度"]),
+    ("京东集团", ["京东"]),
+    ("美团点评", ["美团"]),
+    ("小米科技", ["小米"]),
+]:
+    run(["config", "alias", canonical] + aliases)
+
+run(["session", "create", SESS_SRC])
+run(["session", "switch", SESS_SRC])
+
+run(["imp", "invoice", "samples/invoices_good.csv"])
+run(["imp", "txn", "samples/transactions_good.csv"])
+run(["match"])
+
+run(["manual", "match", "-i", "INV-2026-008", "-t", "TXN20260620009",
+     "-n", "差额300元为手续费，财务确认入账【审计测试】"])
+run(["manual", "suspend-inv", "INV-2026-005", "-r", "合同金额争议，等待商务确认【审计】"])
+
+from invoice_reconcile.config import Config
+from invoice_reconcile.session import SessionManager
+
+cfg = Config.load()
+sm = SessionManager(cfg.session_dir)
+sess = sm.load(SESS_SRC)
+
+inv8_id = None
+for inv in sess.invoices.values():
+    if inv.invoice_no == "INV-2026-008":
+        inv8_id = inv.id
+        break
+xiaomi_match_id = None
+for m in sess.matches.values():
+    if inv8_id in m.invoice_ids and not m.reversed and m.match_type == "manual":
+        xiaomi_match_id = m.id
+        break
+assert_true(xiaomi_match_id is not None, "找到小米人工匹配记录用于测试撤销")
+run(["manual", "reverse", xiaomi_match_id, "-r", "演示撤销【审计测试】"])
+run(["manual", "match", "-i", "INV-2026-008", "-t", "TXN20260620009",
+     "-n", "重新匹配：差额300手续费【审计】"])
+
+del cfg, sm, sess
+cfg = Config.load()
+sm = SessionManager(cfg.session_dir)
+sess = sm.load(SESS_SRC)
+summary_src = sm.status_summary(sess)
+
+inv_by_no_src = {i.invoice_no: i for i in sess.invoices.values()}
+txn_by_no_src = {t.txn_id: t for t in sess.transactions.values()}
+matches_src = {m.id: m for m in sess.matches.values()}
+active_matches_src = [m for m in matches_src.values() if not m.reversed]
+reversed_matches_src = [m for m in matches_src.values() if m.reversed]
+history_count_src = len(sess.history)
+
+run(["report", "-f", "both", "-o", "audit_irec_report"])
+with open("audit_irec_report.json", "r", encoding="utf-8") as f:
+    rpt_src = json.load(f)
+
+history_count_before_export = history_count_src
+
+print()
+print("=" * 70)
+print("[A] 导出 → 导入往返测试")
+print("=" * 70)
+
+# A1: 导出审计包
+res, out = run(["audit", "export", "-n", "A类回归测试-完整审计包",
+                "--operator", "tester_01", "-o", "audit_A_full.irecaudit"])
+assert_true("审计包已导出" in out, "A1: export 命令输出成功标记")
+
+audit_dir = os.path.join(os.getcwd(), ".irec_audits")
+audit_path = os.path.join(audit_dir, "audit_A_full.irecaudit")
+assert_true(os.path.exists(audit_path), "A1: 审计包文件生成在 .irec_audits/ 下")
+
+# A2: 检查归档结构（zip 内文件齐全）
+with zipfile.ZipFile(audit_path, "r") as zf:
+    names = zf.namelist()
+    required_files = [
+        "audit_manifest.json",
+        "session_summary.json",
+        "config_snapshot.json",
+        "match_details.csv",
+        "reversal_suspension_records.csv",
+        "source_fingerprints.json",
+        "operation_log.jsonl",
+        "full_report/report.json",
+        "full_report/summary.csv",
+        "full_report/matches.csv",
+        "full_report/unmatched_invoices.csv",
+        "full_report/unmatched_transactions.csv",
+        "full_report/reversed_matches.csv",
+        "session.json",
+    ]
+    for rf in required_files:
+        assert_true(rf in names, f"A2: 归档内包含 {rf}")
+
+    with zf.open("audit_manifest.json") as f:
+        manifest_json = json.load(f)
+    assert_true("metadata" in manifest_json, "A2: manifest 包含 metadata")
+    assert_true("session" in manifest_json, "A2: manifest 包含 session")
+    assert_true("config" in manifest_json, "A2: manifest 包含 config")
+    assert_true("source_fingerprints" in manifest_json, "A2: manifest 包含 source_fingerprints")
+    assert_true("content_hash" in manifest_json, "A2: manifest 包含 content_hash")
+    assert_true(manifest_json["metadata"]["audit_version"], "A2: metadata 中含有版本号")
+    assert_true(manifest_json["metadata"]["original_session_name"] == SESS_SRC,
+                "A2: metadata 中含有原会话名")
+    assert_true(manifest_json["metadata"]["operator"] == "tester_01",
+                "A2: metadata 中含有操作人")
+
+    with zf.open("session_summary.json") as f:
+        summary_audit = json.load(f)
+    assert_true(summary_audit["invoices"]["total"] == summary_src["invoices"]["total"],
+                "A2: 归档内会话摘要发票数与源一致")
+
+    with zf.open("config_snapshot.json") as f:
+        cfg_audit = json.load(f)
+    assert_true("amount_tolerance" in cfg_audit, "A2: 配置快照包含 amount_tolerance")
+    assert_true("customer_name_aliases" in cfg_audit, "A2: 配置快照包含 customer_name_aliases")
+
+    with zf.open("source_fingerprints.json") as f:
+        fps = json.load(f)
+    assert_true(len(fps) == 2, f"A2: 来源指纹共 2 个文件，实际 {len(fps)}")
+
+    with zf.open("operation_log.jsonl") as f:
+        oplog_lines = [l.decode("utf-8").strip() for l in f if l.strip()]
+    assert_true(len(oplog_lines) > 0, "A2: 操作日志不为空")
+    first_op = json.loads(oplog_lines[0])
+    assert_true("action" in first_op and "details" in first_op and "timestamp" in first_op,
+                "A2: 操作日志每条包含 action/details/timestamp")
+
+    with zf.open("match_details.csv") as f:
+        content = f.read().decode("utf-8-sig")
+    assert_true("匹配ID" in content and "撤销原因" in content,
+                "A2: 匹配明细表包含表头关键字")
+
+    with zf.open("reversal_suspension_records.csv") as f:
+        rev_content = f.read().decode("utf-8-sig")
+    assert_true("撤销匹配" in rev_content and "挂起发票" in rev_content,
+                "A2: 撤销挂起记录表包含两类记录")
+
+# A3: audit list / info 正常显示
+res, out = run(["audit", "list"])
+assert_true("audit_A_full.irecaudit" in out, "A3: audit list 显示导出的文件")
+
+res, out = run(["audit", "info", "audit_A_full.irecaudit"])
+assert_true("版本兼容性" in out and "兼容" in out, "A3: audit info 版本兼容标记 ✓")
+assert_true("完整性哈希" in out and "通过" in out, "A3: audit info 完整性校验 ✓")
+assert_true("配置完整性" in out and "完整" in out, "A3: audit info 配置完整 ✓")
+assert_true("配置漂移" in out and "一致" in out, "A3: audit info 配置漂移 ✓")
+assert_true("来源文件数" in out, "A3: audit info 显示来源文件数")
+
+# A4: 导入审计包为新会话（不重名，无冲突）
+run(["audit", "import", "audit_A_full.irecaudit", "--as", SESS_RESTORED, "--switch"])
+
+# A5: 加载新会话，验证核心数据一致性
+cfg2 = Config.load()
+sm2 = SessionManager(cfg2.session_dir)
+assert_true(sm2.exists(SESS_RESTORED), "A5: 导入会话文件存在")
+
+sess2 = sm2.load(SESS_RESTORED)
+summary2 = sm2.status_summary(sess2)
+
+assert_true(summary2["invoices"]["total"] == summary_src["invoices"]["total"],
+            f"A5: 发票总数一致 before={summary_src['invoices']['total']} after={summary2['invoices']['total']}")
+assert_true(summary2["transactions"]["total"] == summary_src["transactions"]["total"],
+            f"A5: 流水总数一致 before={summary_src['transactions']['total']} after={summary2['transactions']['total']}")
+assert_true(summary2["matches"]["active"] == summary_src["matches"]["active"],
+            f"A5: 活动匹配数一致 before={summary_src['matches']['active']} after={summary2['matches']['active']}")
+assert_true(summary2["matches"]["reversed"] == summary_src["matches"]["reversed"],
+            f"A5: 撤销匹配数一致 before={summary_src['matches']['reversed']} after={summary2['matches']['reversed']}")
+assert_true(summary2["invoices"]["suspended"] == summary_src["invoices"]["suspended"],
+            f"A5: 挂起发票数一致 before={summary_src['invoices']['suspended']} after={summary2['invoices']['suspended']}")
+assert_true(summary2["history_count"] >= history_count_before_export + 2,
+            f"A5: 导入会话历史数 >= 原历史数+2 (export动作+import动作): "
+            f"before_export={history_count_before_export} after_import={summary2['history_count']}")
+
+# A6: 未匹配列表内容完全一致
+unmatched_invs_src = sorted(
+    [i.invoice_no for i in sess.invoices.values() if i.status == "unmatched"]
+)
+unmatched_invs_dst = sorted(
+    [i.invoice_no for i in sess2.invoices.values() if i.status == "unmatched"]
+)
+assert_true(unmatched_invs_src == unmatched_invs_dst,
+            f"A6: 未匹配发票列表一致 before={unmatched_invs_src} after={unmatched_invs_dst}")
+
+unmatched_txns_src = sorted(
+    [t.txn_id for t in sess.transactions.values() if t.status == "unmatched"]
+)
+unmatched_txns_dst = sorted(
+    [t.txn_id for t in sess2.transactions.values() if t.status == "unmatched"]
+)
+assert_true(unmatched_txns_src == unmatched_txns_dst,
+            f"A6: 未匹配流水列表一致 before={unmatched_txns_src} after={unmatched_txns_dst}")
+
+# A7: 人工备注存在（小米匹配的备注）
+inv8_dst = None
+for inv in sess2.invoices.values():
+    if inv.invoice_no == "INV-2026-008":
+        inv8_dst = inv
+        break
+assert_true(inv8_dst is not None, "A7: 恢复会话中存在 INV-2026-008")
+
+xiaomi_active_match = None
+for m in sess2.matches.values():
+    if inv8_dst.id in m.invoice_ids and not m.reversed:
+        xiaomi_active_match = m
+        break
+assert_true(xiaomi_active_match is not None, "A7: 恢复会话中小米发票匹配活动记录存在")
+assert_true("差额300手续费" in xiaomi_active_match.notes,
+            f"A7: 人工备注被正确恢复 备注={xiaomi_active_match.notes!r}")
+
+# A8: 挂起原因被正确恢复
+inv5_dst = None
+for inv in sess2.invoices.values():
+    if inv.invoice_no == "INV-2026-005":
+        inv5_dst = inv
+        break
+assert_true(inv5_dst is not None and inv5_dst.suspended, "A8: INV-2026-005 挂起状态被恢复")
+assert_true("合同金额争议" in inv5_dst.suspend_reason,
+            f"A8: 挂起原因被正确恢复 reason={inv5_dst.suspend_reason!r}")
+
+# A9: 撤销记录被正确恢复
+rev_count_dst = sum(1 for m in sess2.matches.values() if m.reversed)
+rev_count_src = sum(1 for m in sess.matches.values() if m.reversed)
+assert_true(rev_count_src == rev_count_dst == 1,
+            f"A9: 撤销记录数一致 src={rev_count_src} dst={rev_count_dst}")
+rev_match = [m for m in sess2.matches.values() if m.reversed][0]
+assert_true("演示撤销" in rev_match.reversed_reason,
+            f"A9: 撤销原因被正确恢复 reason={rev_match.reversed_reason!r}")
+
+# A10: 报表汇总完全一致（导出恢复后的报告）
+run(["session", "switch", SESS_RESTORED])
+run(["report", "-f", "both", "-o", "audit_restored_report"])
+with open("audit_restored_report.json", "r", encoding="utf-8") as f:
+    rpt_dst = json.load(f)
+
+sum_src = rpt_src["summary"]
+sum_dst = rpt_dst["summary"]
+for key1 in ["invoices", "transactions", "matches"]:
+    for key2 in sum_src[key1].keys():
+        assert_true(sum_src[key1][key2] == sum_dst[key1][key2],
+                    f"A10: 报表汇总一致 {key1}.{key2}: src={sum_src[key1][key2]} dst={sum_dst[key1][key2]}")
+
+# A11: 历史日志中包含 audit_export 和 audit_import
+sm_src = SessionManager(cfg.session_dir)
+sess_src_reloaded = sm_src.load(SESS_SRC)
+history_actions_src = [h.action for h in sess_src_reloaded.history]
+history_actions_dst = [h.action for h in sess2.history]
+assert_true("audit_export" in history_actions_src, "A11: 原会话历史中有 audit_export")
+assert_true("audit_import" in history_actions_dst, "A11: 恢复会话历史中有 audit_import")
+
+# 检查 import 历史详情里是否包含冲突模式、配置漂移、重复来源等信息
+import_entries = [h for h in sess2.history if h.action == "audit_import"]
+assert_true(len(import_entries) == 1, "A11: 恢复会话历史中恰好 1 条 audit_import")
+imp_details = import_entries[0].details
+assert_true("source_audit_id" in imp_details, "A11: audit_import 详情含 source_audit_id")
+assert_true("conflict_mode" in imp_details, "A11: audit_import 详情含 conflict_mode")
+assert_true("apply_config" in imp_details, "A11: audit_import 详情含 apply_config")
+
+print()
+print("=" * 70)
+print("[B] 跨重启恢复测试（重新加载会话不变）")
+print("=" * 70)
+
+del cfg, sm, sess, cfg2, sm2, sess2, inv8_dst, inv5_dst, xiaomi_active_match, rev_match
+import gc
+gc.collect()
+
+cfg_r = Config.load()
+sm_r = SessionManager(cfg_r.session_dir)
+sess_r = sm_r.load(SESS_RESTORED)
+summary_r = sm_r.status_summary(sess_r)
+
+# B1: 会话 ID 和核心数字都完全一致
+assert_true(summary_r["session_id"] == summary2["session_id"],
+            "B1: 重启后 session_id 不变")
+for key1 in ["invoices", "transactions", "matches"]:
+    for key2 in summary_r[key1].keys():
+        assert_true(summary_r[key1][key2] == summary2[key1][key2],
+                    f"B1: 重启后 {key1}.{key2} 不变 重启前={summary2[key1][key2]} 重启后={summary_r[key1][key2]}")
+
+# B2: 未匹配列表完全一致
+unmatched_restart_inv = sorted([i.invoice_no for i in sess_r.invoices.values() if i.status == "unmatched"])
+assert_true(unmatched_restart_inv == unmatched_invs_dst,
+            f"B2: 重启后未匹配发票列表不变 before={unmatched_invs_dst} after={unmatched_restart_inv}")
+
+unmatched_restart_txn = sorted([t.txn_id for t in sess_r.transactions.values() if t.status == "unmatched"])
+assert_true(unmatched_restart_txn == unmatched_txns_dst,
+            "B2: 重启后未匹配流水列表不变")
+
+# B3: 挂起原因 / 人工备注 / 撤销记录重启后仍对
+inv5_r = [i for i in sess_r.invoices.values() if i.invoice_no == "INV-2026-005"][0]
+assert_true(inv5_r.suspended and "合同金额争议" in inv5_r.suspend_reason,
+            f"B3: 重启后挂起原因仍正确: {inv5_r.suspend_reason!r}")
+
+inv8_r = [i for i in sess_r.invoices.values() if i.invoice_no == "INV-2026-008"][0]
+match_r = [m for m in sess_r.matches.values() if inv8_r.id in m.invoice_ids and not m.reversed][0]
+assert_true("差额300手续费" in match_r.notes,
+            f"B3: 重启后人工备注仍正确: {match_r.notes!r}")
+
+rev_r = [m for m in sess_r.matches.values() if m.reversed][0]
+assert_true("演示撤销" in rev_r.reversed_reason,
+            f"B3: 重启后撤销原因仍正确: {rev_r.reversed_reason!r}")
+
+# B4: 历史记录包含 audit_import（重启后仍存在）
+hist_r = [h.action for h in sess_r.history]
+assert_true("audit_import" in hist_r, "B4: 重启后历史仍包含 audit_import")
+
+print()
+print("=" * 70)
+print("[C] 冲突提示测试（重名会话分支：拒绝/另存新副本/覆盖）")
+print("=" * 70)
+
+run(["session", "create", SESS_CONFLICT])
+
+# C1: --reject 应失败（被拒绝）
+res, out = run(
+    ["audit", "import", "audit_A_full.irecaudit", "--as", SESS_CONFLICT, "--reject"],
+    expect_fail=True,
+)
+assert_true("已存在" in out or "reject" in out.lower(),
+            "C1: --reject 模式下重名导入被拒绝并给出明确提示")
+sess_c1 = sm_r.load(SESS_CONFLICT)
+assert_true(len(sess_c1.invoices) == 0, "C1: --reject 模式下原会话数据未被改动（仍为空）")
+
+# C2: --auto-rename 自动重命名（另存新副本）
+res, out = run(["audit", "import", "audit_A_full.irecaudit",
+                "--as", SESS_CONFLICT, "--auto-rename"])
+assert_true("因重名已自动重命名" in out, "C2: --auto-rename 模式下显示自动重命名提示")
+assert_true("另存新副本" in out, "C2: --auto-rename 模式下显示另存新副本提示")
+
+all_sessions = sm_r.list_sessions()
+renamed_names = [s["name"] for s in all_sessions
+                 if s["name"].startswith(SESS_CONFLICT) and s["name"] != SESS_CONFLICT]
+assert_true(len(renamed_names) >= 1, f"C2: 存在被重命名的新会话 {renamed_names}")
+sess_c2 = sm_r.load(renamed_names[0])
+assert_true(len(sess_c2.invoices) > 0, f"C2: 重命名后的会话中含有发票数据（{len(sess_c2.invoices)}条）")
+
+# C3: check-sources 命令
+res, out = run(["audit", "check-sources", "audit_A_full.irecaudit",
+                "-s", SESS_RESTORED])
+assert_true("重复导入来源" in out or "未发现重复" in out,
+            "C3: check-sources 命令正常输出")
+
+print()
+print("=" * 70)
+print("[D] 配置漂移 + 配置缺失 + 版本不兼容 + 重复来源")
+print("=" * 70)
+
+# D1: 制造"配置漂移"：修改当前配置，再导入审计包检测漂移
+run(["config", "set", "days_tol", "10"])
+cfg_modified = Config.load()
+assert_true(cfg_modified.date_tolerance_days == 10, "D1: 修改 days_tol 为 10 成功")
+
+# 先创建同名会话，让 --reject 可以触发
+run(["init", "audit_drift_test"])
+res, out = run(["audit", "import", "audit_A_full.irecaudit",
+                "--as", "audit_drift_test", "--reject"],
+               expect_fail=True)
+# 分析信息里应当有配置漂移提示
+res2, out2 = run(["audit", "info", "audit_A_full.irecaudit"])
+assert_true("配置漂移" in out2, "D1: audit info 检测到配置漂移")
+assert_true("date_tolerance_days" in out2, "D1: audit info 列出 date_tolerance_days 漂移项")
+
+# 恢复配置
+run(["config", "set", "days_tol", "3"])
+
+# D2: 制造"配置缺失"的审计包来测试提示
+from invoice_reconcile.audit import _compute_audit_content_hash
+audit_bad_cfg_path = os.path.join(audit_dir, "audit_D_badcfg.irecaudit")
+with zipfile.ZipFile(audit_path, "r") as zf:
+    with zf.open("audit_manifest.json") as f:
+        d = json.load(f)
+
+d.pop("config", None)
+# 重新计算 hash
+d["content_hash"] = _compute_audit_content_hash(
+    d["session"], {}, d.get("source_fingerprints", {}),
+    {k: v for k, v in d["metadata"].items() if k != "created_at" and k != "audit_id"},
+    d.get("manifest", {}),
+)
+with tempfile.TemporaryDirectory() as tmpdir:
+    jp = os.path.join(tmpdir, "audit_manifest.json")
+    with open(jp, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False)
+    with zipfile.ZipFile(audit_bad_cfg_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.write(jp, arcname="audit_manifest.json")
+
+res, out = run(["audit", "import", "audit_D_badcfg.irecaudit", "--as", "audit_D_dest",
+                "--auto-rename"])
+assert_true("缺少配置项" in out or "缺失" in out,
+            "D2: 导入缺少配置的审计包时会给出缺失配置提示")
+
+# D3: 制造"版本不兼容"审计包，应被拒绝导入
+audit_bad_ver_path = os.path.join(audit_dir, "audit_D_badver.irecaudit")
+with zipfile.ZipFile(audit_path, "r") as zf:
+    with zf.open("audit_manifest.json") as f:
+        d = json.load(f)
+d["metadata"]["audit_version"] = "99.0"
+d["content_hash"] = _compute_audit_content_hash(
+    d["session"], d.get("config", {}), d.get("source_fingerprints", {}),
+    {k: v for k, v in d["metadata"].items() if k != "created_at" and k != "audit_id"},
+    d.get("manifest", {}),
+)
+with tempfile.TemporaryDirectory() as tmpdir:
+    jp = os.path.join(tmpdir, "audit_manifest.json")
+    with open(jp, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False)
+    with zipfile.ZipFile(audit_bad_ver_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.write(jp, arcname="audit_manifest.json")
+
+res, out = run(["audit", "import", "audit_D_badver.irecaudit", "--as", "audit_D_badver_dest"],
+               expect_fail=True)
+assert_true("版本不兼容" in out or "主版本" in out,
+            "D3: 版本不兼容审计包导入被明确拒绝（含原因说明）")
+
+# D4: 重复来源检测
+from invoice_reconcile.audit import AuditManager
+audit_mgr = AuditManager()
+analysis = audit_mgr.analyze("audit_A_full.irecaudit", current_config=cfg_modified)
+dup_count = len(analysis.get("imported_file_hashes", []))
+assert_true(dup_count == 2, f"D4: 审计包分析得到 2 个导入来源，实际 {dup_count}")
+
+print()
+print("=" * 70)
+print("[E] 日志回放测试（replay）")
+print("=" * 70)
+
+# E1: 创建一个空会话作为回放目标
+run(["session", "create", SESS_REPLAY])
+
+# E2: 回放审计包的操作日志
+res, out = run(["audit", "replay", "audit_A_full.irecaudit", "-s", SESS_REPLAY])
+assert_true("操作日志已回放到会话" in out, "E2: replay 命令输出成功标记")
+
+# E3: 检查回放后历史条目数
+sess_replay = sm_r.load(SESS_REPLAY)
+replay_history_count = len(sess_replay.history)
+assert_true(replay_history_count > 0, f"E3: 回放后历史条目数 > 0，实际 {replay_history_count}")
+
+# E4: 回放只追加历史，不还原业务数据（发票数仍为 0）
+assert_true(len(sess_replay.invoices) == 0,
+            f"E4: 回放仅追加历史记录，不还原业务数据（发票数仍为0，实际 {len(sess_replay.invoices)}）")
+
+# E5: 检查历史动作类型
+replay_actions = set(h.action for h in sess_replay.history)
+assert_true("import_invoices" in replay_actions, "E5: 回放历史包含 import_invoices")
+assert_true("auto_match" in replay_actions or "match" in str(replay_actions),
+            "E5: 回放历史包含匹配动作")
+assert_true("audit_export" in replay_actions, "E5: 回放历史包含 audit_export")
+
+print()
+print("=" * 70)
+print("[F] list / info / delete 命令测试")
+print("=" * 70)
+
+# F1: list 列出全部
+res, out = run(["audit", "list"])
+assert_true("审计包存储目录" in out, "F1: audit list 显示存储目录")
+assert_true("audit_A_full.irecaudit" in out, "F1: audit list 包含审计包 A")
+assert_true("audit_D_badcfg.irecaudit" in out, "F1: audit list 包含审计包 badcfg")
+
+# F2: info 详情
+res, out = run(["audit", "info", "audit_A_full.irecaudit"])
+assert_true("审计包ID" in out, "F2: audit info 显示审计包ID")
+assert_true("完整性哈希" in out, "F2: audit info 显示完整性哈希")
+assert_true("来源文件指纹" in out, "F2: audit info 显示来源文件指纹")
+
+# F3: delete 命令正常
+res, out = run(["audit", "delete", "audit_D_badver.irecaudit", "--yes"])
+assert_true("审计包已删除" in out, "F3: audit delete 成功输出标记")
+assert_true(not os.path.exists(os.path.join(audit_dir, "audit_D_badver.irecaudit")),
+            "F3: 审计包文件被实际删除")
+
+# F4: 三选一的冲突模式参数互斥校验
+res, out = run(["audit", "import", "audit_A_full.irecaudit", "--overwrite", "--reject",
+                "--as", "audit_should_fail"], expect_fail=True)
+assert_true("三选一" in out or "不能同时" in out,
+            "F4: 同时指定 --overwrite 和 --reject 被参数校验拦截")
+
+print()
+print("=" * 70)
+print("[G] 归档内容字段完整性验证")
+print("=" * 70)
+
+# G1: 会话摘要里有完整的统计字段
+with zipfile.ZipFile(audit_path, "r") as zf:
+    with zf.open("session_summary.json") as f:
+        summary = json.load(f)
+assert_true("invoices" in summary and "transactions" in summary and "matches" in summary,
+            "G1: 会话摘要包含三大核心统计")
+for sub_key in ["total", "matched", "unmatched", "suspended"]:
+    assert_true(sub_key in summary["invoices"], f"G1: 发票统计包含 {sub_key}")
+
+# G2: 配置快照包含关键字段
+with zipfile.ZipFile(audit_path, "r") as zf:
+    with zf.open("config_snapshot.json") as f:
+        cfg_snap = json.load(f)
+assert_true("amount_tolerance" in cfg_snap, "G2: 配置包含 amount_tolerance")
+assert_true("date_tolerance_days" in cfg_snap, "G2: 配置包含 date_tolerance_days")
+assert_true("customer_name_aliases" in cfg_snap, "G2: 配置包含 customer_name_aliases")
+assert_true("match_strategy" in cfg_snap, "G2: 配置包含 match_strategy")
+
+# G3: 来源指纹包含文件哈希和记录数
+with zipfile.ZipFile(audit_path, "r") as zf:
+    with zf.open("source_fingerprints.json") as f:
+        fps = json.load(f)
+for fh, fp in fps.items():
+    assert_true("file_hash" in fp, "G3: 指纹包含 file_hash")
+    assert_true("file_label" in fp, "G3: 指纹包含 file_label")
+    assert_true("invoice_count" in fp, "G3: 指纹包含 invoice_count")
+    assert_true("transaction_count" in fp, "G3: 指纹包含 transaction_count")
+
+# G4: 操作日志是有效 JSONL
+with zipfile.ZipFile(audit_path, "r") as zf:
+    with zf.open("operation_log.jsonl") as f:
+        lines = [l.decode("utf-8").strip() for l in f if l.strip()]
+for line in lines:
+    entry = json.loads(line)
+    assert_true("action" in entry, "G4: 每条日志包含 action")
+    assert_true("timestamp" in entry, "G4: 每条日志包含 timestamp")
+    assert_true("details" in entry, "G4: 每条日志包含 details")
+
+# G5: 完整报告 JSON 结构正确
+with zipfile.ZipFile(audit_path, "r") as zf:
+    with zf.open("full_report/report.json") as f:
+        rpt = json.load(f)
+assert_true("summary" in rpt, "G5: 报告包含 summary")
+assert_true("matches" in rpt, "G5: 报告包含 matches")
+assert_true("unmatched_invoices" in rpt, "G5: 报告包含 unmatched_invoices")
+assert_true("unmatched_transactions" in rpt, "G5: 报告包含 unmatched_transactions")
+assert_true("reversed_matches" in rpt, "G5: 报告包含 reversed_matches")
+
+# G6: 会话数据完整
+with zipfile.ZipFile(audit_path, "r") as zf:
+    with zf.open("session.json") as f:
+        sess_data = json.load(f)
+assert_true("session_id" in sess_data, "G6: 会话数据包含 session_id")
+assert_true("invoices" in sess_data, "G6: 会话数据包含 invoices")
+assert_true("transactions" in sess_data, "G6: 会话数据包含 transactions")
+assert_true("matches" in sess_data, "G6: 会话数据包含 matches")
+assert_true("history" in sess_data, "G6: 会话数据包含 history")
+assert_true("imported_files" in sess_data, "G6: 会话数据包含 imported_files")
+
+
+# ============================================================
+# 最终汇总
+# ============================================================
+if _cli_failed:
+    print("\n" + "=" * 70)
+    print("[FAILED] 存在 CLI 子进程非零退出码，参见上方 [exit=...] 标记")
+    print("=" * 70)
+    sys.exit(1)
+
+print("\n" + "=" * 70)
+print("[ALL PASSED] 审计包功能回归测试全部通过：")
+print("  [A] 导出→导入往返：发票/流水/匹配/撤销/挂起/备注/历史/指纹 全部一致")
+print("  [B] 跨重启恢复：会话ID、核心数字、未匹配列表、备注、挂起、撤销 全部不变")
+print("  [C] 冲突提示：--reject 拒绝、--auto-rename 另存新副本、check-sources 来源检测")
+print("  [D] 配置漂移/配置缺失/版本不兼容/重复来源 全部正确检测")
+print("  [E] 日志回放：只追加历史，不还原业务数据，动作类型齐全")
+print("  [F] list/info/delete 命令 + 参数互斥校验 全部正常")
+print("  [G] 归档内容：摘要、配置、明细、撤销挂起、指纹、日志、报告、会话数据 完整")
+print("=" * 70)
+sys.exit(0)
