@@ -1,8 +1,8 @@
 {
-  "session_id": "a6fd6255eefb",
-  "name": "audit_drift_test",
+  "session_id": "06b9a667c6ed",
+  "name": "review_target_sess",
   "created_at": "2026-06-22T14:32:11",
-  "updated_at": "2026-06-22T14:32:16",
+  "updated_at": "2026-06-22T14:32:24",
   "invoices": {
     "2fef143fb93d": {
       "id": "2fef143fb93d",
@@ -530,37 +530,35 @@
       }
     },
     {
-      "id": "c962312bb72e",
+      "id": "df260f50e19e",
       "action": "audit_import",
-      "timestamp": "2026-06-22T14:32:16",
+      "timestamp": "2026-06-22T14:32:22",
       "details": {
         "source_audit_id": "audit_0af94c78501d",
         "source_audit_file": "audit_A_full.irecaudit",
         "original_session_name": "audit_source",
         "original_session_id": "aa9b8de296a4",
-        "target_session_name": "audit_drift_test",
-        "target_session_id": "a6fd6255eefb",
-        "conflict_mode": "ask",
-        "apply_config": false,
-        "warnings": [
-          "[提示] 配置漂移检测: 以下配置与当前工作目录配置不同: date_tolerance_days"
-        ],
+        "target_session_name": "review_target_sess",
+        "target_session_id": "06b9a667c6ed",
+        "conflict_mode": "overwrite",
+        "apply_config": true,
+        "warnings": [],
         "config_drift_detected": [
           "date_tolerance_days"
         ],
         "config_drift_full": {
           "date_tolerance_days": {
             "audit": 3,
-            "current": 10
+            "current": 999
           }
         },
         "duplicate_source_files": [
           "0e5c4d09162d75fffc3b898d858dfdce26fce0f9c3df35abe4ab1f5b65701ac4",
           "544b29c885141a96d4c4b0f9811453e42a24c92d1a94ced22280105ead29346d"
         ],
-        "precheck_id": "precheck_22f3f4c5c351",
+        "precheck_id": "precheck_9431d2e0e783",
         "precheck_summary": {
-          "precheck_id": "precheck_22f3f4c5c351",
+          "precheck_id": "precheck_9431d2e0e783",
           "version_ok": true,
           "content_hash_valid": true,
           "config_drift_count": 1,
@@ -575,7 +573,7 @@
             "diff": {
               "date_tolerance_days": {
                 "audit": 3,
-                "current": 10
+                "current": 999
               }
             }
           },
@@ -586,28 +584,67 @@
             "target_only": [],
             "audit_only": []
           },
-          "session_existed_before": false,
+          "session_existed_before": true,
           "precheck_conclusion": "pass",
-          "precheck_conflict_resolution": "new_session",
-          "final_conflict_resolution": "new_session",
-          "final_session_name": "audit_drift_test",
-          "warnings_count": 1,
+          "precheck_conflict_resolution": "overwrite",
+          "final_conflict_resolution": "overwrite",
+          "final_session_name": "review_target_sess",
+          "warnings_count": 0,
           "errors_count": 0,
-          "warnings": [
-            "配置漂移: 以下 1 项配置与当前工作目录不同: date_tolerance_days"
-          ],
+          "warnings": [],
           "errors": []
         },
-        "final_action": "create",
-        "final_action_reason": "目标会话名未被占用，创建新会话",
+        "final_action": "overwrite",
+        "final_action_reason": "同名会话已存在，用户指定 --overwrite 强制覆盖",
         "conflict_branch_result": {
-          "session_existed_before": false,
-          "overwritten": false,
+          "session_existed_before": true,
+          "overwritten": true,
           "renamed": false,
-          "original_name": "",
-          "final_name": "audit_drift_test"
+          "original_name": "review_target_sess",
+          "final_name": "review_target_sess"
         },
-        "import_timestamp": "2026-06-22T14:32:16"
+        "import_timestamp": "2026-06-22T14:32:22"
+      }
+    },
+    {
+      "id": "a5d8dc149cf4",
+      "action": "audit_export",
+      "timestamp": "2026-06-22T14:32:24",
+      "details": {
+        "audit_id": "audit_d58452546c74",
+        "audit_file": "audit_B_reexport.irecaudit",
+        "audit_version": "1.0",
+        "notes": "",
+        "operator": "",
+        "summary_snapshot": {
+          "session_id": "06b9a667c6ed",
+          "name": "review_target_sess",
+          "created_at": "2026-06-22T14:32:11",
+          "updated_at": "2026-06-22T14:32:22",
+          "invoices": {
+            "total": 8,
+            "matched": 7,
+            "unmatched": 0,
+            "suspended": 1,
+            "amount_total": 100151.25,
+            "amount_matched": 81251.25
+          },
+          "transactions": {
+            "total": 10,
+            "matched": 8,
+            "unmatched": 2,
+            "suspended": 0,
+            "amount_total": 110951.25,
+            "amount_matched": 81551.25
+          },
+          "matches": {
+            "active": 7,
+            "reversed": 1,
+            "total": 8
+          },
+          "history_count": 9,
+          "imported_files": 2
+        }
       }
     }
   ],

@@ -1,9 +1,9 @@
 {
-  "precheck_id": "precheck_42e2eb2bc1d6",
+  "precheck_id": "precheck_4375cbbac8d2",
   "audit_file": "audit_A_full.irecaudit",
   "audit_path": "D:\\workSpace\\AI__SPACE\\zyx-00129\\.irec_audits\\audit_A_full.irecaudit",
-  "audit_id": "audit_fcf08171fe04",
-  "precheck_at": "2026-06-22T13:18:36",
+  "audit_id": "audit_0af94c78501d",
+  "precheck_at": "2026-06-22T14:32:21",
   "target_session_name": "audit_review_test",
   "conflict_mode": "rename",
   "apply_config": false,
@@ -28,11 +28,18 @@
   "importable": true,
   "summary": {
     "original_session_name": "audit_source",
-    "original_session_id": "5c5faca28359",
+    "original_session_id": "aa9b8de296a4",
     "invoices_count": 8,
     "transactions_count": 10,
     "matches_count": 8,
     "history_count": 8,
     "imported_files_count": 2
-  }
+  },
+  "import_executed": true,
+  "imported_at": "2026-06-22T14:32:21",
+  "imported_session_name": "audit_review_test",
+  "imported_session_id": "20113ab5ee2b",
+  "actual_final_action": "create",
+  "actual_conflict_mode": "rename",
+  "config_drift_summary": {}
 }

@@ -1,8 +1,8 @@
 {
-  "session_id": "a6fd6255eefb",
-  "name": "audit_drift_test",
+  "session_id": "0076c647141c",
+  "name": "rename_sess_base_restored",
   "created_at": "2026-06-22T14:32:11",
-  "updated_at": "2026-06-22T14:32:16",
+  "updated_at": "2026-06-22T14:32:26",
   "invoices": {
     "2fef143fb93d": {
       "id": "2fef143fb93d",
@@ -530,37 +530,35 @@
       }
     },
     {
-      "id": "c962312bb72e",
+      "id": "bff8234a47ef",
       "action": "audit_import",
-      "timestamp": "2026-06-22T14:32:16",
+      "timestamp": "2026-06-22T14:32:26",
       "details": {
         "source_audit_id": "audit_0af94c78501d",
         "source_audit_file": "audit_A_full.irecaudit",
         "original_session_name": "audit_source",
         "original_session_id": "aa9b8de296a4",
-        "target_session_name": "audit_drift_test",
-        "target_session_id": "a6fd6255eefb",
-        "conflict_mode": "ask",
-        "apply_config": false,
-        "warnings": [
-          "[提示] 配置漂移检测: 以下配置与当前工作目录配置不同: date_tolerance_days"
-        ],
+        "target_session_name": "rename_sess_base_restored",
+        "target_session_id": "0076c647141c",
+        "conflict_mode": "rename",
+        "apply_config": true,
+        "warnings": [],
         "config_drift_detected": [
           "date_tolerance_days"
         ],
         "config_drift_full": {
           "date_tolerance_days": {
             "audit": 3,
-            "current": 10
+            "current": 555
           }
         },
         "duplicate_source_files": [
           "0e5c4d09162d75fffc3b898d858dfdce26fce0f9c3df35abe4ab1f5b65701ac4",
           "544b29c885141a96d4c4b0f9811453e42a24c92d1a94ced22280105ead29346d"
         ],
-        "precheck_id": "precheck_22f3f4c5c351",
+        "precheck_id": "precheck_7d11e633077b",
         "precheck_summary": {
-          "precheck_id": "precheck_22f3f4c5c351",
+          "precheck_id": "precheck_7d11e633077b",
           "version_ok": true,
           "content_hash_valid": true,
           "config_drift_count": 1,
@@ -575,7 +573,7 @@
             "diff": {
               "date_tolerance_days": {
                 "audit": 3,
-                "current": 10
+                "current": 555
               }
             }
           },
@@ -586,28 +584,26 @@
             "target_only": [],
             "audit_only": []
           },
-          "session_existed_before": false,
+          "session_existed_before": true,
           "precheck_conclusion": "pass",
-          "precheck_conflict_resolution": "new_session",
-          "final_conflict_resolution": "new_session",
-          "final_session_name": "audit_drift_test",
-          "warnings_count": 1,
+          "precheck_conflict_resolution": "rename",
+          "final_conflict_resolution": "rename",
+          "final_session_name": "rename_sess_base_restored",
+          "warnings_count": 0,
           "errors_count": 0,
-          "warnings": [
-            "配置漂移: 以下 1 项配置与当前工作目录不同: date_tolerance_days"
-          ],
+          "warnings": [],
           "errors": []
         },
-        "final_action": "create",
-        "final_action_reason": "目标会话名未被占用，创建新会话",
+        "final_action": "rename",
+        "final_action_reason": "同名会话已存在，用户指定 --auto-rename 自动另存新副本",
         "conflict_branch_result": {
-          "session_existed_before": false,
+          "session_existed_before": true,
           "overwritten": false,
-          "renamed": false,
-          "original_name": "",
-          "final_name": "audit_drift_test"
+          "renamed": true,
+          "original_name": "rename_sess_base_restored",
+          "final_name": "rename_sess_base_restored"
         },
-        "import_timestamp": "2026-06-22T14:32:16"
+        "import_timestamp": "2026-06-22T14:32:26"
       }
     }
   ],

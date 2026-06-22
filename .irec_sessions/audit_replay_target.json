@@ -1,16 +1,16 @@
 {
-  "session_id": "5079b0f19a4e",
+  "session_id": "05f3977ac544",
   "name": "audit_replay_target",
-  "created_at": "2026-06-22T13:18:31",
-  "updated_at": "2026-06-22T13:18:31",
+  "created_at": "2026-06-22T14:32:17",
+  "updated_at": "2026-06-22T14:32:17",
   "invoices": {},
   "transactions": {},
   "matches": {},
   "history": [
     {
-      "id": "59137fb76597",
+      "id": "60b52f91c66a",
       "action": "import_invoices",
-      "timestamp": "2026-06-22T13:18:31",
+      "timestamp": "2026-06-22T14:32:17",
       "details": {
         "file": "invoices_good.csv",
         "count": 8,
@@ -18,9 +18,9 @@
       }
     },
     {
-      "id": "906e73f5bec6",
+      "id": "ba24606a25b2",
       "action": "import_transactions",
-      "timestamp": "2026-06-22T13:18:31",
+      "timestamp": "2026-06-22T14:32:17",
       "details": {
         "file": "transactions_good.csv",
         "count": 10,
@@ -28,27 +28,27 @@
       }
     },
     {
-      "id": "04880ab6368c",
+      "id": "7c3e5f50abd3",
       "action": "auto_match",
-      "timestamp": "2026-06-22T13:18:31",
+      "timestamp": "2026-06-22T14:32:17",
       "details": {
         "matched_count": 6,
         "invoice_ids_used": [
-          "14ebc8d1c778",
-          "424757a3e473",
-          "57416030a25f",
-          "ad26cb2eb7f3",
-          "cb3d0cd6b61f",
-          "dcccd55bf8f4"
+          "0d4d22914ec4",
+          "1fda6ff275bd",
+          "2fef143fb93d",
+          "53180ba7bb07",
+          "53f3f01f800e",
+          "d4dad4a03c82"
         ],
         "transaction_ids_used": [
-          "110d4536fc03",
-          "3e1466a3bff3",
-          "699bbf90e944",
-          "9ae968985c36",
-          "bc6244d42e3a",
-          "f33cfb8f45ed",
-          "fa99aea3b492"
+          "37889f3f61a5",
+          "4d357da55045",
+          "81be7a796cef",
+          "a627484f62aa",
+          "b409db5f2d3a",
+          "c74fe5a049d0",
+          "f25119b8d070"
         ],
         "config": {
           "amount_tolerance": 0.01,
@@ -57,16 +57,16 @@
       }
     },
     {
-      "id": "6c542052cda9",
+      "id": "958a9e9c1e4a",
       "action": "manual_match",
-      "timestamp": "2026-06-22T13:18:31",
+      "timestamp": "2026-06-22T14:32:17",
       "details": {
-        "match_id": "4bed80114cce",
+        "match_id": "f6d3e4c161da",
         "invoice_ids": [
-          "39eccf326a4c"
+          "b96f8f7ecb64"
         ],
         "transaction_ids": [
-          "029167198a83"
+          "f14ef43c5e20"
         ],
         "invoice_nos": [
           "INV-2026-008"
@@ -81,42 +81,42 @@
       }
     },
     {
-      "id": "50e31b79bb9e",
+      "id": "034cabf325d9",
       "action": "suspend_invoice",
-      "timestamp": "2026-06-22T13:18:31",
+      "timestamp": "2026-06-22T14:32:17",
       "details": {
-        "invoice_id": "e0abd6b088a7",
+        "invoice_id": "3bb0991e476c",
         "invoice_no": "INV-2026-005",
         "reason": "合同金额争议，等待商务确认【审计】"
       }
     },
     {
-      "id": "af01b9cc693a",
+      "id": "f0aa3f396f32",
       "action": "reverse_match",
-      "timestamp": "2026-06-22T13:18:31",
+      "timestamp": "2026-06-22T14:32:17",
       "details": {
-        "match_id": "4bed80114cce",
+        "match_id": "f6d3e4c161da",
         "match_type": "manual",
         "invoice_ids": [
-          "39eccf326a4c"
+          "b96f8f7ecb64"
         ],
         "transaction_ids": [
-          "029167198a83"
+          "f14ef43c5e20"
         ],
         "reason": "演示撤销【审计测试】"
       }
     },
     {
-      "id": "8f25ebdf2a3e",
+      "id": "9b791c06c382",
       "action": "manual_match",
-      "timestamp": "2026-06-22T13:18:31",
+      "timestamp": "2026-06-22T14:32:17",
       "details": {
-        "match_id": "b43f18f94173",
+        "match_id": "1b691770288c",
         "invoice_ids": [
-          "39eccf326a4c"
+          "b96f8f7ecb64"
         ],
         "transaction_ids": [
-          "029167198a83"
+          "f14ef43c5e20"
         ],
         "invoice_nos": [
           "INV-2026-008"
@@ -131,20 +131,20 @@
       }
     },
     {
-      "id": "7541ea2320a2",
+      "id": "62a2585c1b2e",
       "action": "audit_export",
-      "timestamp": "2026-06-22T13:18:31",
+      "timestamp": "2026-06-22T14:32:17",
       "details": {
-        "audit_id": "audit_fcf08171fe04",
+        "audit_id": "audit_0af94c78501d",
         "audit_file": "audit_A_full.irecaudit",
         "audit_version": "1.0",
         "notes": "A类回归测试-完整审计包",
         "operator": "tester_01",
         "summary_snapshot": {
-          "session_id": "5c5faca28359",
+          "session_id": "aa9b8de296a4",
           "name": "audit_source",
-          "created_at": "2026-06-22T13:18:26",
-          "updated_at": "2026-06-22T13:18:27",
+          "created_at": "2026-06-22T14:32:11",
+          "updated_at": "2026-06-22T14:32:13",
           "invoices": {
             "total": 8,
             "matched": 7,

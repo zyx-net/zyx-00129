@@ -1,0 +1,50 @@
+{
+  "precheck_id": "precheck_9aa566b8aff4",
+  "audit_file": "audit_B_reexport.irecaudit",
+  "audit_path": ".irec_audits\\audit_B_reexport.irecaudit",
+  "audit_id": "audit_d58452546c74",
+  "precheck_at": "2026-06-22T14:32:25",
+  "target_session_name": "precheck_B_sess",
+  "conflict_mode": "reject",
+  "apply_config": false,
+  "session_exists": false,
+  "resolved_name": "precheck_B_sess",
+  "will_overwrite": false,
+  "will_rename": false,
+  "will_reject": false,
+  "rename_to": "",
+  "version_ok": true,
+  "version_message": "",
+  "content_hash_valid": true,
+  "config_drift": {},
+  "missing_config_keys": [],
+  "duplicate_sources": {
+    "both": [
+      "invoices_good.csv @ 2026-06-22T14:32:12 <-> invoices_good.csv @ 2026-06-22T14:32:12",
+      "transactions_good.csv @ 2026-06-22T14:32:12 <-> transactions_good.csv @ 2026-06-22T14:32:12"
+    ],
+    "target_only": [],
+    "audit_only": []
+  },
+  "warnings": [
+    "发现 2 个重复导入来源，若两边独立做过匹配，数据可能不一致"
+  ],
+  "errors": [],
+  "importable": true,
+  "summary": {
+    "original_session_name": "review_target_sess",
+    "original_session_id": "06b9a667c6ed",
+    "invoices_count": 8,
+    "transactions_count": 10,
+    "matches_count": 8,
+    "history_count": 10,
+    "imported_files_count": 2
+  },
+  "import_executed": false,
+  "imported_at": "",
+  "imported_session_name": "",
+  "imported_session_id": "",
+  "actual_final_action": "",
+  "actual_conflict_mode": "",
+  "config_drift_summary": {}
+}

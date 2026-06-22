@@ -1,0 +1,61 @@
+{
+  "precheck_id": "precheck_df328269fd0f",
+  "audit_file": "audit_A_full.irecaudit",
+  "audit_path": "D:\\workSpace\\AI__SPACE\\zyx-00129\\.irec_audits\\audit_A_full.irecaudit",
+  "audit_id": "audit_0af94c78501d",
+  "precheck_at": "2026-06-22T14:34:16",
+  "target_session_name": "rvw_rename_base",
+  "conflict_mode": "rename",
+  "apply_config": true,
+  "session_exists": true,
+  "resolved_name": "rvw_rename_base_restored",
+  "will_overwrite": false,
+  "will_rename": true,
+  "will_reject": false,
+  "rename_to": "rvw_rename_base_restored",
+  "version_ok": true,
+  "version_message": "",
+  "content_hash_valid": true,
+  "config_drift": {
+    "date_tolerance_days": {
+      "audit": 3,
+      "current": 444
+    }
+  },
+  "missing_config_keys": [],
+  "duplicate_sources": {
+    "both": [],
+    "target_only": [],
+    "audit_only": []
+  },
+  "warnings": [],
+  "errors": [],
+  "importable": true,
+  "summary": {
+    "original_session_name": "audit_source",
+    "original_session_id": "aa9b8de296a4",
+    "invoices_count": 8,
+    "transactions_count": 10,
+    "matches_count": 8,
+    "history_count": 8,
+    "imported_files_count": 2
+  },
+  "import_executed": true,
+  "imported_at": "2026-06-22T14:34:16",
+  "imported_session_name": "rvw_rename_base_restored",
+  "imported_session_id": "774d229ee640",
+  "actual_final_action": "rename",
+  "actual_conflict_mode": "rename",
+  "config_drift_summary": {
+    "total": 1,
+    "changed_keys": [
+      "date_tolerance_days"
+    ],
+    "diff": {
+      "date_tolerance_days": {
+        "audit": 3,
+        "current": 444
+      }
+    }
+  }
+}

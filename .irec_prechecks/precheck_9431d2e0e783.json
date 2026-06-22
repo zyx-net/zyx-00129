@@ -1,0 +1,61 @@
+{
+  "precheck_id": "precheck_9431d2e0e783",
+  "audit_file": "audit_A_full.irecaudit",
+  "audit_path": "D:\\workSpace\\AI__SPACE\\zyx-00129\\.irec_audits\\audit_A_full.irecaudit",
+  "audit_id": "audit_0af94c78501d",
+  "precheck_at": "2026-06-22T14:32:22",
+  "target_session_name": "review_target_sess",
+  "conflict_mode": "overwrite",
+  "apply_config": true,
+  "session_exists": true,
+  "resolved_name": "review_target_sess",
+  "will_overwrite": true,
+  "will_rename": false,
+  "will_reject": false,
+  "rename_to": "",
+  "version_ok": true,
+  "version_message": "",
+  "content_hash_valid": true,
+  "config_drift": {
+    "date_tolerance_days": {
+      "audit": 3,
+      "current": 999
+    }
+  },
+  "missing_config_keys": [],
+  "duplicate_sources": {
+    "both": [],
+    "target_only": [],
+    "audit_only": []
+  },
+  "warnings": [],
+  "errors": [],
+  "importable": true,
+  "summary": {
+    "original_session_name": "audit_source",
+    "original_session_id": "aa9b8de296a4",
+    "invoices_count": 8,
+    "transactions_count": 10,
+    "matches_count": 8,
+    "history_count": 8,
+    "imported_files_count": 2
+  },
+  "import_executed": true,
+  "imported_at": "2026-06-22T14:32:22",
+  "imported_session_name": "review_target_sess",
+  "imported_session_id": "06b9a667c6ed",
+  "actual_final_action": "overwrite",
+  "actual_conflict_mode": "overwrite",
+  "config_drift_summary": {
+    "total": 1,
+    "changed_keys": [
+      "date_tolerance_days"
+    ],
+    "diff": {
+      "date_tolerance_days": {
+        "audit": 3,
+        "current": 999
+      }
+    }
+  }
+}

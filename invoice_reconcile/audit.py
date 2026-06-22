@@ -698,9 +698,19 @@ class AuditManager:
             "version_ok": precheck_result.version_ok,
             "content_hash_valid": precheck_result.content_hash_valid,
             "config_drift_count": len(precheck_result.config_drift),
+            "config_drift_keys": list(precheck_result.config_drift.keys()),
+            "config_drift_summary": precheck_result.config_drift_summary,
             "missing_config_keys": precheck_result.missing_config_keys,
             "duplicate_source_count": len(precheck_result.duplicate_sources.get("both", [])),
+            "duplicate_sources": precheck_result.duplicate_sources,
             "session_existed_before": precheck_result.session_exists,
+            "precheck_conclusion": "pass" if precheck_result.importable else "fail",
+            "precheck_conflict_resolution": (
+                "overwrite" if precheck_result.will_overwrite else
+                "rename" if precheck_result.will_rename else
+                "reject" if precheck_result.will_reject else
+                "new_session"
+            ),
             "final_conflict_resolution": (
                 "overwrite" if overwritten else
                 "rename" if renamed else
@@ -710,7 +720,24 @@ class AuditManager:
             "final_session_name": desired_name,
             "warnings_count": len(precheck_result.warnings),
             "errors_count": len(precheck_result.errors),
+            "warnings": precheck_result.warnings,
+            "errors": precheck_result.errors,
         }
+
+        final_action_label = (
+            "overwrite" if overwritten else
+            "rename" if renamed else
+            "create"
+        )
+        final_reason = ""
+        if overwritten:
+            final_reason = "同名会话已存在，用户指定 --overwrite 强制覆盖"
+        elif renamed:
+            final_reason = "同名会话已存在，用户指定 --auto-rename 自动另存新副本"
+        elif precheck_result.session_exists and conflict_mode == "reject":
+            final_reason = "同名会话已存在，冲突模式为 reject，应被拒绝（不会走到这里）"
+        else:
+            final_reason = "目标会话名未被占用，创建新会话"
 
         sm.add_history(
             new_session,
@@ -725,15 +752,35 @@ class AuditManager:
             apply_config=apply_config,
             warnings=warnings,
             config_drift_detected=list(config_drift.keys()) if config_drift else [],
+            config_drift_full=config_drift,
             duplicate_source_files=duplicate_sources,
             precheck_id=precheck_result.precheck_id,
             precheck_summary=precheck_summary,
-            final_action="overwrite" if overwritten else (
-                "rename" if renamed else "create"
-            ),
+            final_action=final_action_label,
+            final_action_reason=final_reason,
+            conflict_branch_result={
+                "session_existed_before": precheck_result.session_exists,
+                "overwritten": overwritten,
+                "renamed": renamed,
+                "original_name": desired_name if (overwritten or precheck_result.session_exists) else "",
+                "final_name": desired_name,
+            },
+            import_timestamp=_now_iso(),
         )
 
         sm._save(new_session)
+
+        if save_precheck:
+            precheck_store = PrecheckStore()
+            old_precheck = precheck_store.load(precheck_result.precheck_id)
+            if old_precheck is not None:
+                old_precheck.import_executed = True
+                old_precheck.imported_at = _now_iso()
+                old_precheck.imported_session_name = desired_name
+                old_precheck.imported_session_id = new_session.session_id
+                old_precheck.actual_final_action = final_action_label
+                old_precheck.actual_conflict_mode = conflict_mode
+                precheck_store.save(old_precheck)
 
         return {
             "success": True,
@@ -797,6 +844,71 @@ class AuditManager:
             raise FileNotFoundError(f"审计包不存在: {filename_or_path}")
         path.unlink()
         return True
+
+    def find_audit_imports(
+        self,
+        audit_id: str,
+        sm: SessionManager,
+    ) -> List[Dict[str, Any]]:
+        """反向查找：给定审计包 audit_id，在所有会话中查找从它导入的历史记录。
+        返回结构化列表，每项对应一次 audit_import 操作，用于三处入口复查时复用。"""
+        results: List[Dict[str, Any]] = []
+        for sess_info in sm.list_sessions():
+            try:
+                sess = sm.load(sess_info["name"])
+            except Exception:
+                continue
+            for h in sess.history:
+                if h.action != "audit_import":
+                    continue
+                if h.details.get("source_audit_id") != audit_id:
+                    continue
+                d = h.details
+                pre_sum = d.get("precheck_summary", {})
+                conflict = d.get("conflict_branch_result", {})
+                results.append({
+                    "session_name": sess.name,
+                    "session_id": sess.session_id,
+                    "history_entry_id": h.id,
+                    "history_timestamp": h.timestamp,
+                    "source_audit_id": d.get("source_audit_id", ""),
+                    "source_audit_file": d.get("source_audit_file", ""),
+                    "original_session_name": d.get("original_session_name", ""),
+                    "original_session_id": d.get("original_session_id", ""),
+                    "target_session_name": d.get("target_session_name", ""),
+                    "target_session_id": d.get("target_session_id", ""),
+                    "conflict_mode": d.get("conflict_mode", ""),
+                    "apply_config": d.get("apply_config", False),
+                    "final_action": d.get("final_action", ""),
+                    "final_action_reason": d.get("final_action_reason", ""),
+                    "final_action_label": (
+                        "覆盖（overwrite）" if d.get("final_action") == "overwrite" else
+                        "自动重命名（auto-rename）" if d.get("final_action") == "rename" else
+                        "拒绝（reject）" if d.get("final_action") == "reject" else
+                        "创建新会话"
+                    ),
+                    "precheck_id": d.get("precheck_id", ""),
+                    "precheck_conclusion": (
+                        "通过（可导入）" if pre_sum.get("precheck_conclusion") == "pass" else
+                        "失败（不可导入）" if pre_sum.get("precheck_conclusion") == "fail" else
+                        "(未知)"
+                    ),
+                    "precheck_conflict_resolution": pre_sum.get("precheck_conflict_resolution", ""),
+                    "final_conflict_resolution": pre_sum.get("final_conflict_resolution", ""),
+                    "session_existed_before": conflict.get("session_existed_before", False),
+                    "overwritten": conflict.get("overwritten", False),
+                    "renamed": conflict.get("renamed", False),
+                    "config_drift_keys": d.get("config_drift_detected", []),
+                    "config_drift_count": len(d.get("config_drift_detected", [])),
+                    "config_drift_full": d.get("config_drift_full", {}),
+                    "config_drift_summary": pre_sum.get("config_drift_summary", {}),
+                    "duplicate_source_count": pre_sum.get("duplicate_source_count", 0),
+                    "duplicate_sources": pre_sum.get("duplicate_sources", {}),
+                    "warnings": d.get("warnings", []),
+                    "missing_config_keys": pre_sum.get("missing_config_keys", []),
+                    "import_timestamp": d.get("import_timestamp", h.timestamp),
+                })
+        return results
 
     def check_duplicate_sources(
         self,
@@ -884,6 +996,15 @@ class AuditManager:
         config_drift = analysis.get("config_drift", {})
         missing_config_keys = analysis.get("missing_config_keys", [])
 
+        config_drift_summary = {}
+        if config_drift:
+            changed_keys = list(config_drift.keys())
+            config_drift_summary = {
+                "total": len(changed_keys),
+                "changed_keys": changed_keys,
+                "diff": {k: v for k, v in list(config_drift.items())[:10]},
+            }
+
         if not version_ok:
             errors.append(f"版本不兼容: {version_message}")
 
@@ -962,6 +1083,13 @@ class AuditManager:
             errors=errors,
             importable=importable,
             summary=summary,
+            import_executed=False,
+            imported_at="",
+            imported_session_name="",
+            imported_session_id="",
+            actual_final_action="",
+            actual_conflict_mode="",
+            config_drift_summary=config_drift_summary,
         )
 
         return result
@@ -996,12 +1124,31 @@ class PrecheckResult:
     errors: List[str]
     importable: bool
     summary: Dict[str, Any]
+    import_executed: bool = False
+    imported_at: str = ""
+    imported_session_name: str = ""
+    imported_session_id: str = ""
+    actual_final_action: str = ""
+    actual_conflict_mode: str = ""
+    config_drift_summary: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict) -> "PrecheckResult":
+        field_defaults = {
+            "import_executed": False,
+            "imported_at": "",
+            "imported_session_name": "",
+            "imported_session_id": "",
+            "actual_final_action": "",
+            "actual_conflict_mode": "",
+            "config_drift_summary": {},
+        }
+        for k, v in field_defaults.items():
+            if k not in data:
+                data[k] = v
         return cls(**data)
 
 
@@ -1044,6 +1191,11 @@ class PrecheckStore:
                     "precheck_at": data.get("precheck_at", ""),
                     "target_session_name": data.get("target_session_name", ""),
                     "importable": data.get("importable", False),
+                    "import_executed": data.get("import_executed", False),
+                    "imported_at": data.get("imported_at", ""),
+                    "imported_session_name": data.get("imported_session_name", ""),
+                    "imported_session_id": data.get("imported_session_id", ""),
+                    "actual_final_action": data.get("actual_final_action", ""),
                 })
             except Exception:
                 results.append({
@@ -1053,6 +1205,11 @@ class PrecheckStore:
                     "precheck_at": "",
                     "target_session_name": "",
                     "importable": False,
+                    "import_executed": False,
+                    "imported_at": "",
+                    "imported_session_name": "",
+                    "imported_session_id": "",
+                    "actual_final_action": "",
                 })
         return results
 

@@ -575,16 +575,98 @@ irec audit precheck-show precheck_xxxxxxxxxxxx
 irec config set days_tol 10
 
 # 导入审计包，应检测到配置漂移并警告，但导入仍然成功
-irec audit import may_2026_final.irecaudit --as "audit_drift_demo"
+irec audit import may_2026_final.irecaudit --as "audit_drift_demo" --apply-config
 # => 输出：
+#   预检ID: precheck_xxxxxxxxxxxx
 #   [提示] 配置漂移检测：共 X 项与当前工作目录配置不同
 #          - date_tolerance_days: 审计包=3, 当前=10
 #          加 --apply-config 可覆盖为审计包中的配置
 #   [OK] 审计包已导入为会话 'audit_drift_demo'
+#   最终处理方式: 创建新会话（无重名）
 #   新会话ID / 来源审计包ID / 原会话
 #   配置漂移项：date_tolerance_days
 #   重复来源文件：X 个
 #   状态面板（导入后的会话数据）
+
+# ======================
+# 4b. 三处复查入口演示（任一入口信息一致）
+# ======================
+
+# --- 复查入口 A：审计包信息页（反向查找所有导入记录）---
+irec audit info may_2026_final.irecaudit
+# => 输出（末尾新增）：
+#   ═══════════════════════════════════════════════════════
+#   ▶ 导入复查（本次审计包共被导入 N 次）
+#   ┌─────────────────────────────────────────────────────┐
+#   │ 第 1 次导入                                          │
+#   │   目标会话       : audit_drift_demo  (ID: sess_xxx)  │
+#   │   预检结论       : ✓ 通过（可导入）                   │
+#   │   预检ID         : precheck_xxxxxxxxxxxx             │
+#   │   最终处理方式   : 覆盖（overwrite） / 创建新会话     │
+#   │   处理原因       : 同名会话已存在，用户指定覆盖        │
+#   │   冲突分支结果   : 同名会话已存在 → 覆盖原会话         │
+#   │   配置漂移摘要   : 检测到 1 项差异                    │
+#   │     - date_tolerance_days: 审计包=3, 当前=10         │
+#   │   重复来源摘要   : 发现 2 个重复导入来源              │
+#   │   配置恢复       : ✓ 已恢复审计包中的配置              │
+#   │   导入时间       : 2026-xx-xx xx:xx:xx               │
+#   └─────────────────────────────────────────────────────┘
+#   复查入口跳转:
+#     • 预检记录复查: irec audit precheck-show precheck_xxx
+#     • 会话历史复查: irec show history --action audit_import -s audit_drift_demo
+
+# --- 复查入口 B：预检记录查询（导入回写信息）---
+irec audit precheck-show precheck_xxxxxxxxxxxx
+# => 输出（末尾新增）：
+#   ───────────────────────────────────────────────────────
+#   ▶ 实际导入结果（复查入口）
+#     是否已执行导入: ✓ 是
+#     导入时间      : 2026-xx-xx xx:xx:xx
+#     最终导入会话  : audit_drift_demo  (ID: sess_xxx)
+#     最终处理方式  : 覆盖（overwrite）
+#       冲突说明    : 目标会话 audit_drift_demo 已存在，用户指定覆盖
+#     实际冲突模式  : overwrite
+#     配置漂移摘要  : 检测到 1 项差异（完整列表见上方）
+#     重复来源摘要  : 发现 2 个重复导入来源（完整列表见上方）
+#   ───────────────────────────────────────────────────────
+#   ▶ 下一步建议（已执行导入）：
+#     复查本次处理 → 审计包详情: irec audit info may_2026_final.irecaudit
+#     复查本次处理 → 操作历史: irec show history --action audit_import -s audit_drift_demo
+#     查看会话状态 → irec status -s audit_drift_demo
+
+# --- 复查入口 C：会话历史（audit_import 专用格式化）---
+irec show history --action audit_import -s audit_drift_demo
+# => 输出（专用格式化框，不再是 json 截断）：
+#   ╔══════════════════════════════════════════════════════╗
+#   ║ [2026-xx-xx xx:xx:xx] audit_import  （点击展开复查详情）║
+#   ╠══════════════════════════════════════════════════════╣
+#   ║  预检结论       : ✓ 通过（可导入）                    ║
+#   ║  预检ID         : precheck_xxxxxxxxxxxx              ║
+#   ║  最终处理方式   : 覆盖（overwrite）                   ║
+#   ║    处理原因     : 同名会话已存在，用户指定覆盖         ║
+#   ╠══════════════════════════════════════════════════════╣
+#   ║  冲突分支结果   : 同名会话已存在 → 覆盖原会话（已替换）║
+#   ╠══════════════════════════════════════════════════════╣
+#   ║  配置漂移摘要   : 检测到 1 项差异                     ║
+#   ║    - date_tolerance_days: 审计包=3, 当前=10          ║
+#   ║  重复来源摘要   : ✓ 未发现重复来源 / 发现 N 个         ║
+#   ╠══════════════════════════════════════════════════════╣
+#   ║  目标会话       : audit_drift_demo  (ID: sess_xxx)   ║
+#   ║  来源审计包     : may_2026_final.irecaudit  (ID: ..) ║
+#   ║  原会话         : default  (ID: sess_xxx)            ║
+#   ║  配置恢复       : ✓ 已恢复审计包中的配置到当前工作目录 ║
+#   ╠══════════════════════════════════════════════════════╣
+#   ║  其他入口复查:                                      ║
+#   ║    • 预检复查: irec audit precheck-show precheck_xxx ║
+#   ║    • 审计包复查: irec audit info may_2026_final...   ║
+#   ╚══════════════════════════════════════════════════════╝
+
+# --- 预检列表（新增已导入/最终会话列）---
+irec audit precheck-list
+# => 表头新增 2 列：
+#   预检ID   审计包   预检时间   目标会话   可导入   已导入   最终会话
+#   -------  -------  ---------  ---------  -------  -------  ------------
+#   pre_xxx  may...   2026-xx..  audit_...  ✓ 通过    ✓ 是    audit_drift_demo
 
 # 恢复配置
 irec config set days_tol 3
@@ -745,7 +827,7 @@ python _test_snapshot_regression.py
 #   覆盖：--overwrite 覆盖 + --apply-config 配置恢复
 #   配置缺失提示 + 版本不兼容拒绝 + 删除 + 参数互斥校验  全部分支正确
 
-# 审计包功能回归（A往返 / B重启 / C冲突 / D配置漂移·缺失·版本·重复来源 / E日志回放 / F list/info/delete / G内容完整性 / H导入预检）
+# 审计包功能回归（A往返 / B重启 / C冲突 / D配置漂移·缺失·版本·重复来源 / E日志回放 / F list/info/delete / G内容完整性 / H导入预检 / I三处复查对齐 / J跨重启一致性 / K导出再导入链路 / L冲突分支+漂移全覆盖）
 python _test_audit_regression.py
 # => [ALL PASSED] 审计包功能回归测试全部通过，exit 0
 # 覆盖子断言：
@@ -800,19 +882,22 @@ python _test_audit_regression.py
 | **审计包导入-hash 校验** | 篡改审计包内容后导入 | 弹出确认警告，用户取消则终止导入 |
 | **审计包 check-sources** | `irec audit check-sources may_2026_final.irecaudit -s 某会话` | 对比并列出双方都导入过的重复CSV来源哈希 |
 | **审计包 replay 日志回放** | `irec audit replay may_2026_final.irecaudit -s 空会话` | 只追加操作历史（N条），不还原业务数据（发票/流水/匹配仍为0）；动作类型齐全（import/match/suspend/reverse等） |
-| **导入/恢复/回写入历史** | `irec show history --action audit_import` & `audit_export` & `audit_replay` | 三个动作均有详细历史记录，audit_import 含 source_audit_id、conflict_mode、apply_config、config_drift、duplicate_sources 等详情 |
-| **跨重启一致性** | 导入后 `irec status` → 重启CLI → 再 `irec status` | 新会话 ID、发票/流水/匹配/撤销/挂起总数、未匹配列表内容与顺序、人工备注、挂起原因、撤销原因、报表汇总 全部与导入完成时一致 |
-| **audit list / info / delete** | 三个命令分别执行 | list 列出所有审计包含原会话与数据量；info 展示版本兼容✓/完整性✓/配置✓/漂移项/指纹 多级标记；delete --yes 物理删除文件 |
+| **导入/恢复/回写入历史** | `irec show history --action audit_import` & `audit_export` & `audit_replay` | 三个动作均有详细历史记录，audit_import 专用格式化框显示：预检结论、最终处理方式（reject/overwrite/auto-rename）+ 原因、冲突分支结果、配置漂移摘要、重复来源、缺失配置、配置恢复标记、其他入口跳转建议，不再是 JSON 截断 |
+| **跨重启一致性** | 导入后 `irec status` → 重启CLI → 再 `irec status`；再查三处入口 | 新会话 ID、发票/流水/匹配/撤销/挂起总数、未匹配列表内容与顺序、人工备注、挂起原因、撤销原因、报表汇总 全部与导入完成时一致；**预检记录 7 个导入回写字段（import_executed/imported_*/actual_*）持久化不变；会话历史新增字段（final_action_reason/conflict_branch_result/config_drift_full/precheck_summary/import_timestamp）重启后依然存在** |
+| **audit list / info / delete** | 三个命令分别执行 | list 列出所有审计包含原会话与数据量；**info 末尾新增「导入复查」区块，遍历所有导入记录显示：目标会话、预检结论、预检ID、处理方式+原因、冲突分支、配置漂移、重复来源、配置恢复、跳转建议**；delete --yes 物理删除文件 |
 | **审计包导入预检** | `irec audit precheck may_2026_final.irecaudit --as demo --reject` | 输出结构化预检报告，包含会话冲突分析、版本与完整性检查、配置检查、重复来源检查、数据概览五大模块 |
 | **预检-不落库** | 执行 precheck 后检查目标会话 | 目标会话未被创建（预检仅评估风险，不写入数据库） |
 | **预检-三分支冲突检测** | 同名会话存在时分别用 --reject / --overwrite / --auto-rename 预检 | reject 模式结论为"无法导入"；overwrite 结论为"可以导入（将覆盖）"；auto-rename 结论为"可以导入（将重命名）"且显示最终会话名 |
 | **预检-配置漂移检测** | 修改 days_tol 后执行 precheck | 预检报告中配置漂移项显示 ⚠ 并列出差异明细（如 date_tolerance_days: 审计包=3, 当前=10） |
 | **预检-重复导入来源检测** | precheck 指定 --compare-session 为已导入相同CSV的会话 | 预检报告中重复来源项显示 ⚠ 并列出重复文件数量 |
 | **预检-可执行导入命令提示** | precheck 报告底部 | 显示可直接复制执行的 import 命令，包含所有指定参数 |
-| **预检结果持久化** | `irec audit precheck-list` & `precheck-show` | precheck-list 列出所有已保存记录；precheck-show 可查看完整预检报告，与原 precheck 输出一致 |
-| **预检-跨重启一致性** | CLI 重启后执行 `precheck-list` & `precheck-show` | 所有预检记录仍然存在，同一份摘要结论重启后依然可查 |
-| **导入后预检结论可复查** | 导入后查看 audit_import 历史记录 & 用 precheck-show 复查 | 历史记录包含 precheck_id 和 precheck_summary；用 precheck-show 可查看同一份预检结论 |
-| **一键回归脚本** | `python _test_audit_regression.py` | 输出 `[ALL PASSED]` + exit 0，覆盖 [A]往返/[B]重启/[C]冲突/[D]漂移·缺失·版本·重复来源/[E]回放/[F]list/info/delete/[G]内容完整性/[H]导入预检 八大类 |
+| **预检结果持久化** | `irec audit precheck-list` & `precheck-show` | **precheck-list 表头新增「已导入」「最终会话」两列**；precheck-show 可查看完整预检报告，与原 precheck 输出一致 |
+| **预检-跨重启一致性** | CLI 重启后执行 `precheck-list` & `precheck-show` | 所有预检记录仍然存在，同一份摘要结论重启后依然可查；**已导入记录的 7 个回写字段（import_executed 等）不丢失** |
+| **导入后预检结论可复查** | 导入后用 precheck-show 复查 | **precheck-show 末尾新增「实际导入结果（复查入口）」区块：显示是否已导入 ✓、导入时间、最终导入会话名+ID、最终处理方式标签、实际冲突模式、冲突原因说明、配置漂移摘要、重复来源摘要；底部按状态分流显示建议（未导入→import命令/已导入→三处复查命令/不可导入→原建议）** |
+| **三处复查入口信息对齐** | 对同一次导入，分别从 audit info / precheck-show / show history 三个入口查看 | 三处显示的 **final_action（reject/overwrite/auto-rename）、precheck_id、target_session_name、config_drift 差异明细、duplicate_sources 数量 完全一致**，无字段丢失或内容打架 |
+| **导出后再导入链路** | 导入审计包得到会话 S1 → 导出 S1 为 audit_B → 导入 audit_B 得到 S2 | **audit_B 的 session.json 中含完整 audit_import 历史（final_action/final_action_reason/conflict_branch_result/config_drift_full/precheck_id/precheck_summary/import_timestamp 字段完整）**；S2 的历史中包含至少 2 次 audit_import 记录（1次来自 B 本身，1次是当前导入）；再次导出的审计包可正常预检和 info 查看 |
+| **冲突分支+配置漂移全覆盖** | overwrite + 漂移、auto-rename + 漂移、reject 三种场景 | 三种场景的 **final_action_reason 说明正确**，precheck-show/show history/audit info 三处均正确标记各自的处理方式标签；冲突分支结果在会话历史中清晰显示（覆盖原会话 / 另存新副本 '原名' → '新名' / 创建新会话） |
+| **一键回归脚本** | `python _test_audit_regression.py` | 输出 `[ALL PASSED]` + exit 0，覆盖 [A]往返/[B]重启/[C]冲突/[D]漂移·缺失·版本·重复来源/[E]回放/[F]list/info/delete/[G]内容完整性/[H]导入预检/**[I]三处复查对齐/[J]跨重启一致性/[K]导出再导入链路/[L]冲突分支+漂移全覆盖** 十二大类 |
 | **一键回归脚本** | `python _test_snapshot_regression.py` | 输出 `[ALL PASSED]` + exit 0，覆盖 A往返/B重启/C冲突/D覆盖 四大类 |
 
 ---
