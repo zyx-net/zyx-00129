@@ -3,6 +3,7 @@ from datetime import datetime
 
 from .session import Session, SessionManager, Invoice, BankTransaction, MatchRecord, _uuid, _now_iso
 from .matcher import _create_match
+from .closeout import check_session_closed
 
 
 def _find_invoice(session: Session, identifier: str) -> Optional[Invoice]:
@@ -29,6 +30,10 @@ def manual_match(session: Session, sm: SessionManager,
                  invoice_ids: List[str], transaction_ids: List[str],
                  notes: str = "") -> Dict[str, Any]:
     """人工匹配发票和流水"""
+    closed_check = check_session_closed(session, "人工匹配")
+    if not closed_check["allowed"]:
+        return {"success": False, "error": closed_check["error"], "match": None}
+
     invoices = []
     not_found = []
     for iid in invoice_ids:
@@ -104,6 +109,10 @@ def _is_matched_reversed(session: Session, obj_id: str, obj_type: str) -> bool:
 
 
 def suspend_invoice(session: Session, sm: SessionManager, invoice_id: str, reason: str = "") -> Dict[str, Any]:
+    closed_check = check_session_closed(session, "挂起发票")
+    if not closed_check["allowed"]:
+        return {"success": False, "error": closed_check["error"]}
+
     inv = _find_invoice(session, invoice_id)
     if inv is None:
         return {"success": False, "error": f"未找到发票: {invoice_id}"}
@@ -121,6 +130,10 @@ def suspend_invoice(session: Session, sm: SessionManager, invoice_id: str, reaso
 
 
 def suspend_transaction(session: Session, sm: SessionManager, txn_id: str, reason: str = "") -> Dict[str, Any]:
+    closed_check = check_session_closed(session, "挂起流水")
+    if not closed_check["allowed"]:
+        return {"success": False, "error": closed_check["error"]}
+
     txn = _find_transaction(session, txn_id)
     if txn is None:
         return {"success": False, "error": f"未找到流水: {txn_id}"}
@@ -174,6 +187,10 @@ def unsuspend_transaction(session: Session, sm: SessionManager, txn_id: str) -> 
 
 
 def reverse_match(session: Session, sm: SessionManager, match_id: str, reason: str = "") -> Dict[str, Any]:
+    closed_check = check_session_closed(session, "撤销匹配")
+    if not closed_check["allowed"]:
+        return {"success": False, "error": closed_check["error"], "match": None}
+
     if match_id not in session.matches:
         return {"success": False, "error": f"未找到匹配记录: {match_id}"}
     match = session.matches[match_id]

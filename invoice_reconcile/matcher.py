@@ -3,6 +3,7 @@ from typing import Dict, List, Tuple, Any, Optional
 
 from .session import Session, SessionManager, Invoice, BankTransaction, MatchRecord, _uuid
 from .config import Config
+from .closeout import check_session_closed
 
 
 def _parse_date_iso(s: str) -> datetime:
@@ -20,6 +21,17 @@ def _amounts_close(a: float, b: float, tol: float) -> bool:
 
 
 def auto_match(session: Session, sm: SessionManager, config: Config) -> Dict[str, Any]:
+    closed_check = check_session_closed(session, "自动匹配")
+    if not closed_check["allowed"]:
+        return {
+            "success": False,
+            "error": closed_check["error"],
+            "matches_count": 0,
+            "invoices_matched": 0,
+            "transactions_matched": 0,
+            "matches": [],
+        }
+
     tol_amount = config.amount_tolerance
     tol_days = config.date_tolerance_days
 

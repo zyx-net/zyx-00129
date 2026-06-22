@@ -69,6 +69,26 @@ class HistoryEntry:
 
 
 @dataclass
+class CloseRecord:
+    id: str
+    closed_at: str
+    closed_by: str
+    notes: str
+    is_unclosed: bool = False
+    unclosed_at: str = ""
+    unclosed_by: str = ""
+    unclose_reason: str = ""
+    summary: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "CloseRecord":
+        return cls(**data)
+
+
+@dataclass
 class Session:
     session_id: str
     name: str
@@ -79,6 +99,8 @@ class Session:
     matches: Dict[str, MatchRecord] = field(default_factory=dict)
     history: List[HistoryEntry] = field(default_factory=list)
     imported_files: Dict[str, str] = field(default_factory=dict)
+    close_records: List[CloseRecord] = field(default_factory=list)
+    is_closed: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -91,6 +113,8 @@ class Session:
             "matches": {k: asdict(v) for k, v in self.matches.items()},
             "history": [asdict(h) for h in self.history],
             "imported_files": self.imported_files,
+            "close_records": [cr.to_dict() for cr in self.close_records],
+            "is_closed": self.is_closed,
         }
 
     @classmethod
@@ -110,6 +134,9 @@ class Session:
         for h in data.get("history", []):
             session.history.append(HistoryEntry(**h))
         session.imported_files = data.get("imported_files", {})
+        for cr in data.get("close_records", []):
+            session.close_records.append(CloseRecord.from_dict(cr))
+        session.is_closed = data.get("is_closed", False)
         return session
 
 
@@ -227,15 +254,20 @@ class SessionManager:
         txn_unmatched = txn_total - txn_matched - txn_suspended
         active_matches = sum(1 for m in session.matches.values() if not m.reversed)
         reversed_matches = sum(1 for m in session.matches.values() if m.reversed)
+        reversed_unreviewed = sum(1 for m in session.matches.values() if m.reversed and not m.notes.startswith("[已复核]"))
         inv_amount_total = sum(i.amount for i in session.invoices.values())
         txn_amount_total = sum(t.amount for t in session.transactions.values())
         inv_amount_matched = sum(i.amount for i in session.invoices.values() if i.status == "matched")
         txn_amount_matched = sum(t.amount for t in session.transactions.values() if t.status == "matched")
+        latest_close = session.close_records[-1] if session.close_records else None
         return {
             "session_id": session.session_id,
             "name": session.name,
             "created_at": session.created_at,
             "updated_at": session.updated_at,
+            "is_closed": session.is_closed,
+            "close_count": len(session.close_records),
+            "latest_close": latest_close.to_dict() if latest_close else None,
             "invoices": {
                 "total": inv_total,
                 "matched": inv_matched,
@@ -255,6 +287,7 @@ class SessionManager:
             "matches": {
                 "active": active_matches,
                 "reversed": reversed_matches,
+                "reversed_unreviewed": reversed_unreviewed,
                 "total": len(session.matches),
             },
             "history_count": len(session.history),

@@ -5,6 +5,7 @@ from typing import List, Dict, Tuple, Any
 from decimal import Decimal, InvalidOperation
 
 from .session import Session, SessionManager, Invoice, BankTransaction, _uuid
+from .closeout import check_session_closed
 
 
 DATE_FORMATS = [
@@ -86,6 +87,10 @@ def _detect_encoding(filepath: str) -> str:
 
 
 def import_invoices(session: Session, sm: SessionManager, filepath: str) -> Dict[str, Any]:
+    closed_check = check_session_closed(session, "导入发票")
+    if not closed_check["allowed"]:
+        raise ImportError(closed_check["error"])
+
     filepath = os.path.abspath(filepath)
     if not os.path.exists(filepath):
         raise ImportError(f"文件不存在: {filepath}")
@@ -180,6 +185,10 @@ def import_invoices(session: Session, sm: SessionManager, filepath: str) -> Dict
 
 
 def import_transactions(session: Session, sm: SessionManager, filepath: str) -> Dict[str, Any]:
+    closed_check = check_session_closed(session, "导入流水")
+    if not closed_check["allowed"]:
+        raise ImportError(closed_check["error"])
+
     filepath = os.path.abspath(filepath)
     if not os.path.exists(filepath):
         raise ImportError(f"文件不存在: {filepath}")

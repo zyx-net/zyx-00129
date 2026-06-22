@@ -25,6 +25,10 @@ from .manual import (
 from .reporter import build_report, export_json, export_csv
 from .snapshot import SnapshotManager, SNAPSHOT_VERSION
 from .audit import AuditManager, AUDIT_VERSION
+from .closeout import (
+    check_close_ready, close_session, unclose_session,
+    get_close_records, export_close_summary,
+)
 
 
 STATE_FILE = ".irec_state.json"
@@ -76,6 +80,28 @@ def _fmt_status_header(summary) -> str:
         f"═══════════════════════════════════════════════════════════════",
         f"  会话状态: {s['name']}  (ID: {s['session_id']})",
         f"  创建: {s['created_at']}    最后更新: {s['updated_at']}",
+    ]
+
+    if s.get("is_closed"):
+        latest = s.get("latest_close")
+        if latest:
+            close_info = f"关账人: {latest.get('closed_by', '?')}  关账时间: {latest.get('closed_at', '?')}"
+            if latest.get("is_unclosed"):
+                lines.append(f"  【⚠ 已解账】 {close_info}")
+                lines.append(f"          解账人: {latest.get('unclosed_by', '?')}  原因: {latest.get('unclose_reason', '?')}")
+            else:
+                lines.append(f"  【✓ 已关账】 {close_info}")
+                if latest.get("notes"):
+                    lines.append(f"          备注: {latest['notes']}")
+        else:
+            lines.append(f"  【✓ 已关账】")
+    else:
+        if s.get("close_count", 0) > 0:
+            lines.append(f"  【○ 未关账】 历史关账 {s['close_count']} 次（当前已解账）")
+        else:
+            lines.append(f"  【○ 未关账】")
+
+    lines.extend([
         f"───────────────────────────────────────────────────────────────",
         f"  发票:   总{s['invoices']['total']:>4}  已匹配{s['invoices']['matched']:>4}  "
         f"未匹配{s['invoices']['unmatched']:>4}  挂起{s['invoices']['suspended']:>4}",
@@ -87,8 +113,14 @@ def _fmt_status_header(summary) -> str:
         f"已匹配{s['transactions']['amount_matched']:>12,.2f}",
         f"  匹配:   活动{s['matches']['active']:>4}  已撤销{s['matches']['reversed']:>4}  "
         f"历史操作{s['history_count']:>4}  已导入文件{s['imported_files']:>4}",
-        f"═══════════════════════════════════════════════════════════════",
-    ]
+    ])
+
+    if s.get("is_closed"):
+        lines.append(f"───────────────────────────────────────────────────────────────")
+        lines.append(f"  【关账后限制】 禁止: 导入 / 自动匹配 / 人工匹配 / 挂起 / 撤销")
+        lines.append(f"                 如需修改，请先执行: irec unclose --by <操作人> --reason <原因>")
+
+    lines.append(f"═══════════════════════════════════════════════════════════════")
     return "\n".join(lines)
 
 
@@ -317,6 +349,8 @@ def imp_txn(csv_path, session_name):
 def match(session_name, dry_run):
     cfg, sm, sess = _load_session(session_name)
     result = auto_match(sess, sm, cfg)
+    if not result.get("success", True):
+        raise click.ClickException(result.get("error", "自动匹配失败"))
     if not dry_run:
         sm.save(sess)
     prefix = "[预览]" if dry_run else "[OK]"
@@ -489,7 +523,7 @@ def list_matches_cmd(show_all, session_name):
 
 @show.command("history", help="查看操作历史")
 @click.option("--limit", "-n", type=int, default=50, help="显示条数")
-@click.option("--action", help="按动作类型过滤（import_invoices, import_transactions, auto_match, manual_match, reverse_match, suspend_invoice, suspend_transaction, unsuspend_invoice, unsuspend_transaction）")
+@click.option("--action", help="按动作类型过滤（import_invoices, import_transactions, auto_match, manual_match, reverse_match, suspend_invoice, suspend_transaction, unsuspend_invoice, unsuspend_transaction, close_session, unclose_session）")
 @click.option("--session", "-s", "session_name", help="指定会话")
 def list_history_cmd(limit, action, session_name):
     cfg, sm, sess = _load_session(session_name)
@@ -501,6 +535,8 @@ def list_history_cmd(limit, action, session_name):
         for h in data:
             if h["action"] == "audit_import":
                 _fmt_audit_import_history(h)
+            elif h["action"] in ("close_session", "unclose_session"):
+                _fmt_close_history(h)
             else:
                 detail_str = json.dumps(h["details"], ensure_ascii=False)
                 if len(detail_str) > 140:
@@ -508,6 +544,53 @@ def list_history_cmd(limit, action, session_name):
                 click.echo(f"  [{h['timestamp']}] {h['action']:<24} :: {detail_str}")
     else:
         click.echo("  (无)")
+
+
+def _fmt_close_history(h):
+    """close_session / unclose_session 历史专用格式化"""
+    d = h["details"]
+    action = h["action"]
+
+    if action == "close_session":
+        click.echo(f"  ╔══════════════════════════════════════════════════════════╗")
+        click.echo(f"  ║ [{h['timestamp']}] close_session  （关账操作）             ║")
+        click.echo(f"  ╠══════════════════════════════════════════════════════════╣")
+        click.echo(f"  ║  关账ID         : {d.get('close_id', '?')}")
+        click.echo(f"  ║  关账人         : {d.get('closed_by', '?')}")
+        if d.get("notes"):
+            click.echo(f"  ║  关账备注       : {d['notes']}")
+        if d.get("force"):
+            click.echo(f"  ║  【⚠ 强制关账】  : 是")
+            if d.get("force_reason"):
+                click.echo(f"  ║    强制原因     : {d['force_reason']}")
+            check_r = d.get("check_result", {})
+            if check_r.get("issues"):
+                click.echo(f"  ║    强制时存在的问题:")
+                for issue in check_r["issues"]:
+                    click.echo(f"  ║      - {issue}")
+        summary = d.get("summary_snapshot", {})
+        if summary:
+            inv = summary.get("invoices", {})
+            txn = summary.get("transactions", {})
+            mtch = summary.get("matches", {})
+            click.echo(f"  ║  关账时汇总     :")
+            click.echo(f"  ║    发票: 总{inv.get('total', 0)} 已匹配{inv.get('matched', 0)} "
+                       f"未匹配{inv.get('unmatched', 0)} 挂起{inv.get('suspended', 0)}")
+            click.echo(f"  ║    流水: 总{txn.get('total', 0)} 已匹配{txn.get('matched', 0)} "
+                       f"未匹配{txn.get('unmatched', 0)} 挂起{txn.get('suspended', 0)}")
+            click.echo(f"  ║    匹配: 活动{mtch.get('active', 0)} 已撤销{mtch.get('reversed', 0)}")
+        click.echo(f"  ╚══════════════════════════════════════════════════════════╝")
+
+    elif action == "unclose_session":
+        click.echo(f"  ╔══════════════════════════════════════════════════════════╗")
+        click.echo(f"  ║ [{h['timestamp']}] unclose_session  （解账操作）           ║")
+        click.echo(f"  ╠══════════════════════════════════════════════════════════╣")
+        click.echo(f"  ║  原关账ID       : {d.get('close_id', '?')}")
+        click.echo(f"  ║  原关账时间     : {d.get('closed_at', '?')}")
+        click.echo(f"  ║  原关账人       : {d.get('closed_by', '?')}")
+        click.echo(f"  ║  解账人         : {d.get('unclosed_by', '?')}")
+        click.echo(f"  ║  解账原因       : {d.get('reason', '?')}")
+        click.echo(f"  ╚══════════════════════════════════════════════════════════╝")
 
 
 def _fmt_audit_import_history(h):
@@ -1653,6 +1736,334 @@ def snapshot_check_conflicts(snapshot_file, session_name):
     click.echo()
     click.echo(f"仅在快照中导入的文件: {len(snap_only)} 个")
     click.echo(f"仅在目标会话中导入的文件: {len(sess_only)} 个")
+
+
+# ============================================================
+# close 命令组（关账管理）
+# ============================================================
+@main.group(help="关账管理：结账关账/解账/查看关账记录/导出关账摘要")
+def close():
+    pass
+
+
+@close.command("do", help="执行关账：核对完成后正式封账。默认检查未匹配/挂起/撤销未复核项，不通过则禁止关账")
+@click.option("--by", "closed_by", required=True, help="关账人姓名")
+@click.option("--notes", "-n", default="", help="关账备注")
+@click.option("--force", is_flag=True, help="强制关账（忽略检查项）")
+@click.option("--force-reason", default="", help="强制关账原因（使用 --force 时建议填写）")
+@click.option("--session", "-s", "session_name", help="指定会话，默认当前会话")
+def close_do(closed_by, notes, force, force_reason, session_name):
+    cfg, sm, sess = _load_session(session_name)
+
+    check_result = check_close_ready(sess)
+
+    if not force and not check_result["can_close"]:
+        click.echo("═══════════════════════════════════════════════════════════════")
+        click.echo("  关账检查未通过！存在以下待处理项：")
+        click.echo("───────────────────────────────────────────────────────────────")
+        for issue in check_result["issues"]:
+            click.echo(f"  ✗ {issue}")
+        click.echo()
+        click.echo("  统计信息:")
+        stats = check_result["stats"]
+        click.echo(f"    未匹配发票: {stats['invoices_unmatched']} 张")
+        click.echo(f"    未匹配流水: {stats['transactions_unmatched']} 笔")
+        click.echo(f"    挂起发票: {stats['invoices_suspended']} 张")
+        click.echo(f"    挂起流水: {stats['transactions_suspended']} 笔")
+        click.echo(f"    撤销未复核: {stats['reversed_unreviewed']} 条")
+        click.echo()
+        click.echo("  请先处理上述问题后再关账，或使用 --force 强制关账并说明原因。")
+        click.echo("═══════════════════════════════════════════════════════════════")
+        raise click.ClickException("关账检查未通过")
+
+    result = close_session(sess, sm, closed_by, notes, force, force_reason)
+
+    if not result["success"]:
+        raise click.ClickException(result["error"])
+
+    sm.save(sess)
+    record = result["record"]
+
+    click.echo()
+    click.echo("═══════════════════════════════════════════════════════════════")
+    click.echo(f"  【✓ 关账成功】 会话 '{sess.name}' 已正式封账")
+    click.echo("───────────────────────────────────────────────────────────────")
+    click.echo(f"  关账ID      : {record.id}")
+    click.echo(f"  关账时间    : {record.closed_at}")
+    click.echo(f"  关账人      : {record.closed_by}")
+    if record.notes:
+        click.echo(f"  关账备注    : {record.notes}")
+    if result.get("force_used"):
+        click.echo(f"  【⚠ 强制关账】原因: {force_reason or '(未填写)'}")
+        click.echo(f"              强制时存在的问题:")
+        for issue in check_result["issues"]:
+            click.echo(f"                - {issue}")
+    click.echo()
+    summary = record.summary
+    click.echo(f"  关账时汇总:")
+    click.echo(f"    发票: 总{summary['invoices']['total']} 已匹配{summary['invoices']['matched']} "
+               f"未匹配{summary['invoices']['unmatched']} 挂起{summary['invoices']['suspended']}")
+    click.echo(f"    流水: 总{summary['transactions']['total']} 已匹配{summary['transactions']['matched']} "
+               f"未匹配{summary['transactions']['unmatched']} 挂起{summary['transactions']['suspended']}")
+    click.echo(f"    匹配: 活动{summary['matches']['active']} 已撤销{summary['matches']['reversed']}")
+    click.echo(f"    历史操作: {summary['history_count']} 条")
+    click.echo(f"    已导入文件: {len(summary['imported_files'])} 个")
+    click.echo()
+    click.echo("  【关账后限制】 禁止: 导入 / 自动匹配 / 人工匹配 / 挂起 / 撤销")
+    click.echo("                 如需修改，请执行: irec unclose --by <操作人> --reason <原因>")
+    click.echo("═══════════════════════════════════════════════════════════════")
+    click.echo()
+    click.echo(_fmt_status_header(sm.status_summary(sess)))
+
+
+@close.command("check", help="检查关账前置条件，不执行实际关账")
+@click.option("--session", "-s", "session_name", help="指定会话，默认当前会话")
+def close_check(session_name):
+    cfg, sm, sess = _load_session(session_name)
+    result = check_close_ready(sess)
+
+    click.echo()
+    click.echo("═══════════════════════════════════════════════════════════════")
+    click.echo(f"  关账前置检查  会话: {sess.name}")
+    click.echo("───────────────────────────────────────────────────────────────")
+
+    if result["can_close"]:
+        click.echo("  ✓ 所有检查项通过，可以关账")
+    else:
+        click.echo("  ✗ 存在待处理项，暂不可关账：")
+        for issue in result["issues"]:
+            click.echo(f"    - {issue}")
+
+    click.echo()
+    click.echo("  统计信息:")
+    stats = result["stats"]
+    click.echo(f"    未匹配发票: {stats['invoices_unmatched']} 张")
+    click.echo(f"    未匹配流水: {stats['transactions_unmatched']} 笔")
+    click.echo(f"    挂起发票: {stats['invoices_suspended']} 张")
+    click.echo(f"    挂起流水: {stats['transactions_suspended']} 笔")
+    click.echo(f"    撤销未复核: {stats['reversed_unreviewed']} 条")
+
+    if result["warnings"]:
+        click.echo()
+        click.echo("  警告:")
+        for w in result["warnings"]:
+            click.echo(f"    ⚠ {w}")
+
+    if result["can_close"]:
+        click.echo()
+        click.echo(f"  执行关账: irec close do --by <姓名> [--notes <备注>]")
+    click.echo("═══════════════════════════════════════════════════════════════")
+
+
+@close.command("list", help="查看所有关账记录")
+@click.option("--session", "-s", "session_name", help="指定会话，默认当前会话")
+def close_list(session_name):
+    cfg, sm, sess = _load_session(session_name)
+    records = get_close_records(sess)
+
+    click.echo()
+    click.echo(f"═══════════════════════════════════════════════════════════════")
+    click.echo(f"  关账记录  会话: {sess.name}  (当前状态: {'已关账' if sess.is_closed else '未关账'})")
+    click.echo(f"═══════════════════════════════════════════════════════════════")
+
+    if not records:
+        click.echo("  (暂无关账记录)")
+        click.echo("═══════════════════════════════════════════════════════════════")
+        return
+
+    click.echo(f"{'关账ID':<16} {'状态':<10} {'关账时间':<22} {'关账人':<12} 备注")
+    click.echo("-" * 110)
+
+    for idx, r in enumerate(reversed(records), 1):
+        status = "✓ 已关账"
+        if r.get("is_unclosed"):
+            status = f"⚠ 已解账 ({r.get('unclosed_by', '?')})"
+        notes = r.get("notes", "")
+        if len(notes) > 40:
+            notes = notes[:37] + "..."
+        click.echo(
+            f"{r['id']:<16} {status:<10} {r['closed_at']:<22} "
+            f"{r.get('closed_by', '?'):<12} {notes}"
+        )
+
+    click.echo("═══════════════════════════════════════════════════════════════")
+    click.echo(f"  查看详情: irec close show <关账ID>")
+    click.echo(f"  导出摘要: irec close export -o <输出路径>")
+    click.echo("═══════════════════════════════════════════════════════════════")
+
+
+@close.command("show", help="查看指定关账记录的详细信息")
+@click.argument("close_id")
+@click.option("--session", "-s", "session_name", help="指定会话，默认当前会话")
+def close_show(close_id, session_name):
+    cfg, sm, sess = _load_session(session_name)
+    records = get_close_records(sess)
+
+    record = next((r for r in records if r["id"] == close_id), None)
+    if not record:
+        raise click.ClickException(f"未找到关账记录: {close_id}")
+
+    click.echo()
+    click.echo("═══════════════════════════════════════════════════════════════")
+    click.echo(f"  关账记录详情")
+    click.echo("═══════════════════════════════════════════════════════════════")
+    click.echo(f"  关账ID      : {record['id']}")
+    click.echo(f"  关账时间    : {record['closed_at']}")
+    click.echo(f"  关账人      : {record.get('closed_by', '?')}")
+    click.echo(f"  关账备注    : {record.get('notes', '(无)')}")
+
+    if record.get("is_unclosed"):
+        click.echo()
+        click.echo(f"  【已解账】")
+        click.echo(f"    解账时间  : {record.get('unclosed_at', '?')}")
+        click.echo(f"    解账人    : {record.get('unclosed_by', '?')}")
+        click.echo(f"    解账原因  : {record.get('unclose_reason', '?')}")
+
+    summary = record.get("summary", {})
+    if summary:
+        click.echo()
+        click.echo("  关账时汇总:")
+        base = summary.get("base_summary", {})
+        inv = summary.get("invoices", {})
+        txn = summary.get("transactions", {})
+        mtch = summary.get("matches", {})
+        click.echo(f"    发票: 总{inv.get('total', 0)} 已匹配{inv.get('matched', 0)} "
+                   f"未匹配{inv.get('unmatched', 0)} 挂起{inv.get('suspended', 0)}")
+        click.echo(f"          金额 总{inv.get('amount_total', 0):,.2f} 已匹配{inv.get('amount_matched', 0):,.2f}")
+        click.echo(f"    流水: 总{txn.get('total', 0)} 已匹配{txn.get('matched', 0)} "
+                   f"未匹配{txn.get('unmatched', 0)} 挂起{txn.get('suspended', 0)}")
+        click.echo(f"          金额 总{txn.get('amount_total', 0):,.2f} 已匹配{txn.get('amount_matched', 0):,.2f}")
+        click.echo(f"    匹配: 活动{mtch.get('active', 0)} 已撤销{mtch.get('reversed', 0)}")
+        click.echo(f"    历史操作: {summary.get('history_count', 0)} 条")
+        click.echo(f"    已导入文件: {len(summary.get('imported_files', []))} 个")
+
+        unmatched = summary.get("unmatched_details", {})
+        if unmatched.get("invoices") or unmatched.get("transactions"):
+            click.echo()
+            click.echo("  关账时未匹配明细:")
+            if unmatched.get("invoices"):
+                click.echo(f"    未匹配发票 ({len(unmatched['invoices'])} 张):")
+                for inv in unmatched["invoices"][:5]:
+                    sus_tag = f" (挂起: {inv['suspend_reason']})" if inv["suspended"] else ""
+                    click.echo(f"      - {inv['invoice_no']} {inv['customer_name']} "
+                               f"{inv['amount']:,.2f} {inv['invoice_date']}{sus_tag}")
+                if len(unmatched["invoices"]) > 5:
+                    click.echo(f"      ... 等共 {len(unmatched['invoices'])} 张")
+            if unmatched.get("transactions"):
+                click.echo(f"    未匹配流水 ({len(unmatched['transactions'])} 笔):")
+                for txn in unmatched["transactions"][:5]:
+                    sus_tag = f" (挂起: {txn['suspend_reason']})" if txn["suspended"] else ""
+                    click.echo(f"      - {txn['txn_id']} {txn['counterparty']} "
+                               f"{txn['amount']:,.2f} {txn['txn_date']}{sus_tag}")
+                if len(unmatched["transactions"]) > 5:
+                    click.echo(f"      ... 等共 {len(unmatched['transactions'])} 笔")
+
+    click.echo("═══════════════════════════════════════════════════════════════")
+
+
+@close.command("export", help="导出关账摘要为JSON文件")
+@click.option("--output", "-o", "output_path", default="close_summary", help="输出路径（不含.json）")
+@click.option("--id", "close_id", default=None, help="指定关账ID导出单条，默认导出所有")
+@click.option("--session", "-s", "session_name", help="指定会话，默认当前会话")
+def close_export(output_path, close_id, session_name):
+    cfg, sm, sess = _load_session(session_name)
+
+    result = export_close_summary(sess, output_path, close_id)
+
+    if not result["success"]:
+        raise click.ClickException(result["error"])
+
+    click.echo(f"[OK] 关账摘要已导出 -> {os.path.abspath(result['output_path'])}")
+    click.echo(f"  包含关账记录: {result['close_count']} 条")
+
+
+# ============================================================
+# unclose 命令（解账）
+# ============================================================
+@main.command(help="解账：解开已关账的会话，需填写解账人及原因，所有操作记入历史")
+@click.option("--by", "unclosed_by", required=True, help="解账人姓名")
+@click.option("--reason", "-r", required=True, help="解账原因")
+@click.option("--session", "-s", "session_name", help="指定会话，默认当前会话")
+def unclose(unclosed_by, reason, session_name):
+    cfg, sm, sess = _load_session(session_name)
+
+    result = unclose_session(sess, sm, unclosed_by, reason)
+
+    if not result["success"]:
+        raise click.ClickException(result["error"])
+
+    sm.save(sess)
+    record = result["record"]
+
+    click.echo()
+    click.echo("═══════════════════════════════════════════════════════════════")
+    click.echo(f"  【⚠ 已解账】 会话 '{sess.name}' 已解除关账状态")
+    click.echo("───────────────────────────────────────────────────────────────")
+    click.echo(f"  原关账ID    : {record.id}")
+    click.echo(f"  原关账时间  : {record.closed_at}")
+    click.echo(f"  原关账人    : {record.closed_by}")
+    if record.notes:
+        click.echo(f"  原关账备注  : {record.notes}")
+    click.echo()
+    click.echo(f"  解账时间    : {record.unclosed_at}")
+    click.echo(f"  解账人      : {record.unclosed_by}")
+    click.echo(f"  解账原因    : {record.unclose_reason}")
+    click.echo()
+    click.echo("  【提示】 会话现已恢复可编辑状态")
+    click.echo("          修改完成后请再次执行 `irec close do` 重新关账")
+    click.echo("═══════════════════════════════════════════════════════════════")
+    click.echo()
+    click.echo(_fmt_status_header(sm.status_summary(sess)))
+
+
+# ============================================================
+# show history 中 close_session / unclose_session 的格式化
+# ============================================================
+def _fmt_close_history(h):
+    """close_session / unclose_session 历史专用格式化"""
+    d = h["details"]
+    action = h["action"]
+
+    if action == "close_session":
+        click.echo(f"  ╔══════════════════════════════════════════════════════════╗")
+        click.echo(f"  ║ [{h['timestamp']}] close_session  （关账操作）             ║")
+        click.echo(f"  ╠══════════════════════════════════════════════════════════╣")
+        click.echo(f"  ║  关账ID         : {d.get('close_id', '?')}")
+        click.echo(f"  ║  关账人         : {d.get('closed_by', '?')}")
+        if d.get("notes"):
+            click.echo(f"  ║  关账备注       : {d['notes']}")
+        if d.get("force"):
+            click.echo(f"  ║  【⚠ 强制关账】  : 是")
+            if d.get("force_reason"):
+                click.echo(f"  ║    强制原因     : {d['force_reason']}")
+            check_r = d.get("check_result", {})
+            if check_r.get("issues"):
+                click.echo(f"  ║    强制时存在的问题:")
+                for issue in check_r["issues"]:
+                    click.echo(f"  ║      - {issue}")
+        summary = d.get("summary_snapshot", {})
+        if summary:
+            inv = summary.get("invoices", {})
+            txn = summary.get("transactions", {})
+            mtch = summary.get("matches", {})
+            click.echo(f"  ║  关账时汇总     :")
+            click.echo(f"  ║    发票: 总{inv.get('total', 0)} 已匹配{inv.get('matched', 0)} "
+                       f"未匹配{inv.get('unmatched', 0)} 挂起{inv.get('suspended', 0)}")
+            click.echo(f"  ║    流水: 总{txn.get('total', 0)} 已匹配{txn.get('matched', 0)} "
+                       f"未匹配{txn.get('unmatched', 0)} 挂起{txn.get('suspended', 0)}")
+            click.echo(f"  ║    匹配: 活动{mtch.get('active', 0)} 已撤销{mtch.get('reversed', 0)}")
+        click.echo(f"  ╚══════════════════════════════════════════════════════════╝")
+
+    elif action == "unclose_session":
+        click.echo(f"  ╔══════════════════════════════════════════════════════════╗")
+        click.echo(f"  ║ [{h['timestamp']}] unclose_session  （解账操作）           ║")
+        click.echo(f"  ╠══════════════════════════════════════════════════════════╣")
+        click.echo(f"  ║  原关账ID       : {d.get('close_id', '?')}")
+        click.echo(f"  ║  原关账时间     : {d.get('closed_at', '?')}")
+        click.echo(f"  ║  原关账人       : {d.get('closed_by', '?')}")
+        click.echo(f"  ║  解账人         : {d.get('unclosed_by', '?')}")
+        click.echo(f"  ║  解账原因       : {d.get('reason', '?')}")
+        click.echo(f"  ╚══════════════════════════════════════════════════════════╝")
 
 
 if __name__ == "__main__":
