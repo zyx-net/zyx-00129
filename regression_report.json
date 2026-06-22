@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-06-22T12:26:48",
+  "generated_at": "2026-06-22T12:45:42",
   "summary": {
-    "session_id": "1d6e23bb6607",
+    "session_id": "1318deffa27c",
     "name": "regression_boundary",
-    "created_at": "2026-06-22T12:26:44",
-    "updated_at": "2026-06-22T12:26:48",
+    "created_at": "2026-06-22T12:45:38",
+    "updated_at": "2026-06-22T12:45:42",
     "invoices": {
       "total": 10,
       "matched": 7,
@@ -66,13 +66,13 @@
   },
   "matches": [
     {
-      "match_id": "952a0bc56e7e",
+      "match_id": "0f15ad5c118b",
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:26:48",
+      "matched_at": "2026-06-22T12:45:42",
       "notes": "一对一匹配: 客户=华为技术有限公司, 金额差=0.0000, 日期差=1天",
       "invoices": [
         {
-          "id": "2134dc612bb5",
+          "id": "01069d0ab720",
           "invoice_no": "INV-2026-001",
           "customer_name": "华为技术有限公司",
           "amount": 12500.0,
@@ -81,7 +81,7 @@
       ],
       "transactions": [
         {
-          "id": "4550ff014191",
+          "id": "e623ac8bae5c",
           "txn_id": "TXN20260601001",
           "counterparty": "华为技术有限公司",
           "amount": 12500.0,
@@ -93,13 +93,13 @@
       "diff_amount": 0.0
     },
     {
-      "match_id": "d7f18a3524fa",
+      "match_id": "28fcde7b685b",
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:26:48",
+      "matched_at": "2026-06-22T12:45:42",
       "notes": "一对一匹配: 客户=阿里巴巴集团, 金额差=0.0000, 日期差=0天",
       "invoices": [
         {
-          "id": "5644852b28c1",
+          "id": "0a4f821ca303",
           "invoice_no": "INV-2026-002",
           "customer_name": "阿里巴巴集团",
           "amount": 8750.5,
@@ -108,7 +108,7 @@
       ],
       "transactions": [
         {
-          "id": "81ef8e4a84b0",
+          "id": "4021a030810c",
           "txn_id": "TXN20260605002",
           "counterparty": "阿里",
           "amount": 8750.5,
@@ -120,13 +120,13 @@
       "diff_amount": 0.0
     },
     {
-      "match_id": "39e17cb25032",
+      "match_id": "884f51d0f9fa",
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:26:48",
+      "matched_at": "2026-06-22T12:45:42",
       "notes": "一对一匹配: 客户=腾讯科技, 金额差=0.0000, 日期差=1天",
       "invoices": [
         {
-          "id": "f91bd4ccab09",
+          "id": "573b16e83803",
           "invoice_no": "INV-2026-003",
           "customer_name": "腾讯科技",
           "amount": 33200.0,
@@ -135,7 +135,7 @@
       ],
       "transactions": [
         {
-          "id": "0c282eace2c6",
+          "id": "7e1bfc536e92",
           "txn_id": "TXN20260608003",
           "counterparty": "腾讯",
           "amount": 33200.0,
@@ -147,13 +147,13 @@
       "diff_amount": 0.0
     },
     {
-      "match_id": "532bcf27b8cd",
+      "match_id": "9a19e7e0a52f",
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:26:48",
+      "matched_at": "2026-06-22T12:45:42",
       "notes": "一对一匹配: 客户=字节跳动, 金额差=0.0000, 日期差=2天",
       "invoices": [
         {
-          "id": "ad6e5092f3b0",
+          "id": "5ca347bcab62",
           "invoice_no": "INV-2026-004",
           "customer_name": "字节跳动",
           "amount": 5600.75,
@@ -162,7 +162,7 @@
       ],
       "transactions": [
         {
-          "id": "6d15971c7893",
+          "id": "575e47376007",
           "txn_id": "TXN20260610004",
           "counterparty": "字节",
           "amount": 5600.75,
@@ -174,13 +174,13 @@
       "diff_amount": 0.0
     },
     {
-      "match_id": "2083c6f7afcc",
+      "match_id": "795c0344f159",
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:26:48",
+      "matched_at": "2026-06-22T12:45:42",
       "notes": "一对一匹配: 客户=京东集团, 金额差=0.0000, 日期差=1天",
       "invoices": [
         {
-          "id": "4949281f8869",
+          "id": "4d735fce0ccf",
           "invoice_no": "INV-2026-006",
           "customer_name": "京东集团",
           "amount": 4200.0,
@@ -189,7 +189,7 @@
       ],
       "transactions": [
         {
-          "id": "f0baf6defa6b",
+          "id": "0771b6a26093",
           "txn_id": "TXN20260612006",
           "counterparty": "京东",
           "amount": 4200.0,
@@ -201,13 +201,13 @@
       "diff_amount": 0.0
     },
     {
-      "match_id": "6e2ee1f8f3bb",
+      "match_id": "9ca74058f295",
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:26:48",
+      "matched_at": "2026-06-22T12:45:42",
       "notes": "一对多匹配: 2笔流水合并, 总金额=7800.00, 发票金额=7800.00, 差额=0.0000",
       "invoices": [
         {
-          "id": "e1e3b8f87040",
+          "id": "723808eae510",
           "invoice_no": "INV-2026-007",
           "customer_name": "美团点评",
           "amount": 7800.0,
@@ -216,14 +216,14 @@
       ],
       "transactions": [
         {
-          "id": "2edc6d2e550e",
+          "id": "6cc15df020be",
           "txn_id": "TXN20260618007",
           "counterparty": "美团",
           "amount": 3000.0,
           "txn_date": "2026-06-19"
         },
         {
-          "id": "82ad073cce75",
+          "id": "24d7e1dce18e",
           "txn_id": "TXN20260618008",
           "counterparty": "美团",
           "amount": 4800.0,
@@ -235,13 +235,13 @@
       "diff_amount": 0.0
     },
     {
-      "match_id": "5fcee129417c",
+      "match_id": "0bfbfadbad57",
       "match_type": "auto",
-      "matched_at": "2026-06-22T12:26:48",
+      "matched_at": "2026-06-22T12:45:42",
       "notes": "一对多匹配: 2笔流水合并, 总金额=6000.00, 发票金额=6000.00, 差额=0.0000",
       "invoices": [
         {
-          "id": "90a82409a0a5",
+          "id": "723da121cbef",
           "invoice_no": "INV-2026-009",
           "customer_name": "拼多多科技有限公司",
           "amount": 6000.0,
@@ -250,14 +250,14 @@
       ],
       "transactions": [
         {
-          "id": "5df677271d00",
+          "id": "d10ce371c419",
           "txn_id": "TXN20260601013",
           "counterparty": "拼多多",
           "amount": 2000.0,
           "txn_date": "2026-06-14"
         },
         {
-          "id": "6ad851b152f7",
+          "id": "80ee920bcda6",
           "txn_id": "TXN20260601014",
           "counterparty": "拼多多",
           "amount": 4000.0,
@@ -272,7 +272,7 @@
   "reversed_matches": [],
   "unmatched_invoices": [
     {
-      "id": "54062645f6dd",
+      "id": "916815f50ee6",
       "invoice_no": "INV-2026-005",
       "customer_name": "百度在线",
       "amount": 18900.0,
@@ -283,7 +283,7 @@
       "source_row": 6
     },
     {
-      "id": "899165a11e59",
+      "id": "9491bdf2a852",
       "invoice_no": "INV-2026-008",
       "customer_name": "小米科技",
       "amount": 9200.0,
@@ -294,7 +294,7 @@
       "source_row": 9
     },
     {
-      "id": "f86378d55ef6",
+      "id": "362f7475e7db",
       "invoice_no": "INV-2026-010",
       "customer_name": "拼多多科技有限公司",
       "amount": 4000.0,
@@ -307,7 +307,7 @@
   ],
   "unmatched_transactions": [
     {
-      "id": "07bfb20a13de",
+      "id": "e4e018b748cc",
       "txn_id": "TXN20260612005",
       "counterparty": "百度",
       "amount": 9400.0,
@@ -318,7 +318,7 @@
       "source_row": 6
     },
     {
-      "id": "4e621ae38f0b",
+      "id": "58ee8d3866cf",
       "txn_id": "TXN20260620009",
       "counterparty": "小米",
       "amount": 9500.0,
@@ -329,7 +329,7 @@
       "source_row": 10
     },
     {
-      "id": "bf3f66aac6da",
+      "id": "e5722b3ef0d3",
       "txn_id": "TXN20260622010",
       "counterparty": "网易",
       "amount": 20000.0,
@@ -340,7 +340,7 @@
       "source_row": 11
     },
     {
-      "id": "f73d8c1242b9",
+      "id": "2cdfe5655391",
       "txn_id": "TXN20260601011",
       "counterparty": "拼多多",
       "amount": 1000.0,
@@ -351,7 +351,7 @@
       "source_row": 2
     },
     {
-      "id": "a20f25dc37ff",
+      "id": "d52ef6831b25",
       "txn_id": "TXN20260601012",
       "counterparty": "拼多多",
       "amount": 5000.0,
@@ -362,7 +362,7 @@
       "source_row": 3
     },
     {
-      "id": "7304016da7bd",
+      "id": "5b4a0606708d",
       "txn_id": "TXN20260601015",
       "counterparty": "拼多多",
       "amount": 1500.0,
@@ -373,7 +373,7 @@
       "source_row": 6
     },
     {
-      "id": "9ece23b1e068",
+      "id": "1a3244ea437a",
       "txn_id": "TXN20260601016",
       "counterparty": "拼多多",
       "amount": 2500.0,

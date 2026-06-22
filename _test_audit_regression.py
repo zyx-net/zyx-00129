@@ -460,12 +460,14 @@ run(["config", "set", "days_tol", "10"])
 cfg_modified = Config.load()
 assert_true(cfg_modified.date_tolerance_days == 10, "D1: 修改 days_tol 为 10 成功")
 
-# 先创建同名会话，让 --reject 可以触发
-run(["init", "audit_drift_test"])
+# 导入审计包，配置漂移应该只警告，不会导致失败
 res, out = run(["audit", "import", "audit_A_full.irecaudit",
-                "--as", "audit_drift_test", "--reject"],
-               expect_fail=True)
-# 分析信息里应当有配置漂移提示
+                "--as", "audit_drift_test"])
+assert_true("配置漂移" in out, "D1: 导入时检测到配置漂移并给出警告")
+assert_true("date_tolerance_days" in out, "D1: 导入警告中列出 date_tolerance_days 漂移项")
+assert_true(res.returncode == 0, "D1: 配置漂移场景下导入仍然成功（仅警告）")
+
+# audit info 也应该能检测到配置漂移
 res2, out2 = run(["audit", "info", "audit_A_full.irecaudit"])
 assert_true("配置漂移" in out2, "D1: audit info 检测到配置漂移")
 assert_true("date_tolerance_days" in out2, "D1: audit info 列出 date_tolerance_days 漂移项")
