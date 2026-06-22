@@ -1,0 +1,166 @@
+{
+  "generated_at": "2026-06-22T10:19:53",
+  "summary": {
+    "session_id": "b36435946199",
+    "name": "reviewer_edge_a02",
+    "created_at": "2026-06-22T10:19:52",
+    "updated_at": "2026-06-22T10:19:52",
+    "invoices": {
+      "total": 2,
+      "matched": 1,
+      "unmatched": 1,
+      "suspended": 0,
+      "amount_total": 180.0,
+      "amount_matched": 100.0
+    },
+    "transactions": {
+      "total": 6,
+      "matched": 2,
+      "unmatched": 4,
+      "suspended": 0,
+      "amount_total": 280.0,
+      "amount_matched": 100.0
+    },
+    "matches": {
+      "active": 1,
+      "reversed": 0,
+      "total": 1
+    },
+    "history_count": 3,
+    "imported_files": 2
+  },
+  "config": {
+    "amount_tolerance": 0.01,
+    "date_tolerance_days": 3,
+    "customer_name_aliases": {
+      "华为技术有限公司": [
+        "华为"
+      ],
+      "阿里巴巴集团": [
+        "阿里",
+        "Alibaba"
+      ],
+      "腾讯科技": [
+        "腾讯"
+      ],
+      "字节跳动": [
+        "字节",
+        "ByteDance"
+      ],
+      "百度在线": [
+        "百度"
+      ],
+      "京东集团": [
+        "京东"
+      ],
+      "美团点评": [
+        "美团"
+      ],
+      "小米科技": [
+        "小米"
+      ],
+      "拼多多科技有限公司": [
+        "拼多多",
+        "PDD"
+      ]
+    },
+    "match_strategy": "amount_date_name"
+  },
+  "matches": [
+    {
+      "match_id": "988ccb574767",
+      "match_type": "auto",
+      "matched_at": "2026-06-22T10:19:52",
+      "notes": "一对多匹配: 2笔流水合并, 总金额=100.00, 发票金额=100.00, 差额=0.0000",
+      "invoices": [
+        {
+          "id": "1ebfb13ae76e",
+          "invoice_no": "INV-REVIEW-EDGE-001",
+          "customer_name": "Reviewer Edge Co",
+          "amount": 100.0,
+          "invoice_date": "2026-06-15"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "c9a1358ab186",
+          "txn_id": "TXN-EDGE-A3",
+          "counterparty": "Reviewer Edge Co",
+          "amount": 30.0,
+          "txn_date": "2026-06-14"
+        },
+        {
+          "id": "cc60f9c2ae91",
+          "txn_id": "TXN-EDGE-A4",
+          "counterparty": "Reviewer Edge Co",
+          "amount": 70.0,
+          "txn_date": "2026-06-16"
+        }
+      ],
+      "invoice_amount_sum": 100.0,
+      "transaction_amount_sum": 100.0,
+      "diff_amount": 0.0
+    }
+  ],
+  "reversed_matches": [],
+  "unmatched_invoices": [
+    {
+      "id": "88a290891453",
+      "invoice_no": "INV-REVIEW-EDGE-002",
+      "customer_name": "Reviewer Edge Co",
+      "amount": 80.0,
+      "invoice_date": "2026-06-10",
+      "suspended": false,
+      "suspend_reason": "",
+      "source_file": "zyx00129_reviewer_edge_invoices.csv",
+      "source_row": 3
+    }
+  ],
+  "unmatched_transactions": [
+    {
+      "id": "9fe8c3f01367",
+      "txn_id": "TXN-EDGE-A1",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 40.0,
+      "txn_date": "2026-05-01",
+      "suspended": false,
+      "suspend_reason": "",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 2
+    },
+    {
+      "id": "1f9023592331",
+      "txn_id": "TXN-EDGE-A2",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 60.0,
+      "txn_date": "2026-05-01",
+      "suspended": false,
+      "suspend_reason": "",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 3
+    },
+    {
+      "id": "7fe3230790c1",
+      "txn_id": "TXN-EDGE-B1",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 30.0,
+      "txn_date": "2026-05-01",
+      "suspended": false,
+      "suspend_reason": "",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 6
+    },
+    {
+      "id": "d52261a753e2",
+      "txn_id": "TXN-EDGE-B2",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 50.0,
+      "txn_date": "2026-05-01",
+      "suspended": false,
+      "suspend_reason": "",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 7
+    }
+  ],
+  "history_count": 3
+}

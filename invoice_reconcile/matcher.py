@@ -78,22 +78,22 @@ def auto_match(session: Session, sm: SessionManager, config: Config) -> Dict[str
             key_amount=lambda i: i.amount,
             tol=tol_amount,
             max_items=min(len(remaining_invs), 8),
+            # 日期过滤：每一张发票的开票日期必须与流水日期在容差之内
+            combination_filter=lambda group, t: all(
+                _dates_close(i.invoice_date, t.txn_date, tol_days) for i in group
+            ),
         )
         if result:
             invs_group, txn = result
-            # 检查所有日期
-            all_dates_ok = all(_dates_close(inv.invoice_date, txn.txn_date, tol_days)
-                               for inv in invs_group)
-            if all_dates_ok:
-                sum_amount = sum(i.amount for i in invs_group)
-                match = _create_match(session, sm, list(invs_group), [txn], "auto",
-                                      f"多对一匹配: {len(invs_group)}张发票合并, 总金额={sum_amount:.2f}, 流水金额={txn.amount:.2f}, 差额={abs(sum_amount-txn.amount):.4f}")
-                matches_made.append(match)
-                for i in invs_group:
-                    i.status = "matched"
-                    used_invoice_ids.add(i.id)
-                txn.status = "matched"
-                used_txn_ids.add(txn.id)
+            sum_amount = sum(i.amount for i in invs_group)
+            match = _create_match(session, sm, list(invs_group), [txn], "auto",
+                                  f"多对一匹配: {len(invs_group)}张发票合并, 总金额={sum_amount:.2f}, 流水金额={txn.amount:.2f}, 差额={abs(sum_amount-txn.amount):.4f}")
+            matches_made.append(match)
+            for i in invs_group:
+                i.status = "matched"
+                used_invoice_ids.add(i.id)
+            txn.status = "matched"
+            used_txn_ids.add(txn.id)
 
     # --- 规则3: 一对多精确匹配 (同客户多流水合并 = 一张发票, 总金额精确) ---
     for cust, cust_invs in inv_by_customer.items():
@@ -107,21 +107,22 @@ def auto_match(session: Session, sm: SessionManager, config: Config) -> Dict[str
             key_amount=lambda t: t.amount,
             tol=tol_amount,
             max_items=min(len(remaining_txns), 8),
+            # 日期过滤：每一笔流水的交易日期必须与发票日期在容差之内
+            combination_filter=lambda group, i: all(
+                _dates_close(i.invoice_date, t.txn_date, tol_days) for t in group
+            ),
         )
         if result:
             txns_group, inv = result
-            all_dates_ok = all(_dates_close(inv.invoice_date, t.txn_date, tol_days)
-                               for t in txns_group)
-            if all_dates_ok:
-                sum_amount = sum(t.amount for t in txns_group)
-                match = _create_match(session, sm, [inv], list(txns_group), "auto",
-                                      f"一对多匹配: {len(txns_group)}笔流水合并, 总金额={sum_amount:.2f}, 发票金额={inv.amount:.2f}, 差额={abs(sum_amount-inv.amount):.4f}")
-                matches_made.append(match)
-                for t in txns_group:
-                    t.status = "matched"
-                    used_txn_ids.add(t.id)
-                inv.status = "matched"
-                used_invoice_ids.add(inv.id)
+            sum_amount = sum(t.amount for t in txns_group)
+            match = _create_match(session, sm, [inv], list(txns_group), "auto",
+                                  f"一对多匹配: {len(txns_group)}笔流水合并, 总金额={sum_amount:.2f}, 发票金额={inv.amount:.2f}, 差额={abs(sum_amount-inv.amount):.4f}")
+            matches_made.append(match)
+            for t in txns_group:
+                t.status = "matched"
+                used_txn_ids.add(t.id)
+            inv.status = "matched"
+            used_invoice_ids.add(inv.id)
 
     # --- 超出容差的一对多不匹配，保持未解决 ---
 
@@ -162,8 +163,13 @@ def _create_match(session: Session, sm: SessionManager,
     return match
 
 
-def _find_exact_subset_sum(items, targets, key_amount, tol, max_items):
-    """在 items 中找一个子集，其金额和等于某个 target，返回 (subset, target) 或 None"""
+def _find_exact_subset_sum(items, targets, key_amount, tol, max_items, combination_filter=None):
+    """在 items 中找一个子集，其金额和等于某个 target。
+    combination_filter(subset, target) -> bool：
+        提供时用于在金额命中后二次校验（如日期容差），不合格则 continue 继续寻找下一个组合，
+        而不是直接返回，保证首个命中但日期不合格的组合不会阻断后续合格组合。
+    找不到返回 None。
+    """
     from itertools import combinations
     for r in range(2, max_items + 1):
         for subset in combinations(items, r):
@@ -171,5 +177,8 @@ def _find_exact_subset_sum(items, targets, key_amount, tol, max_items):
             for t in targets:
                 t_amt = t.amount if hasattr(t, "amount") else key_amount(t)
                 if _amounts_close(s, t_amt, tol):
+                    # 若有自定义过滤且不通过，继续找下一个组合
+                    if combination_filter is not None and not combination_filter(list(subset), t):
+                        continue
                     return (list(subset), t)
     return None

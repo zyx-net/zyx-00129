@@ -1,0 +1,8 @@
+﻿ID,流水号,对方单位,金额,交易日期,挂起,挂起原因,来源文件,来源行号
+ecf8b0efeaaf,TXN20260612005,百度,9400.0,2026-06-13,否,,transactions_good.csv,6
+66b68d3a0a4e,TXN20260620009,小米,9500.0,2026-06-21,否,,transactions_good.csv,10
+88076a07b4ac,TXN20260622010,网易,20000.0,2026-06-22,否,,transactions_good.csv,11
+38b0791c0bee,TXN20260601011,拼多多,1000.0,2026-05-01,否,,transactions_regression.csv,2
+8735595fdcd7,TXN20260601012,拼多多,5000.0,2026-05-01,否,,transactions_regression.csv,3
+ed7156042971,TXN20260601015,拼多多,1500.0,2026-05-01,否,,transactions_regression.csv,6
+194770321599,TXN20260601016,拼多多,2500.0,2026-05-01,否,,transactions_regression.csv,7

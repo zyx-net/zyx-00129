@@ -1,0 +1,177 @@
+{
+  "session_id": "b36435946199",
+  "name": "reviewer_edge_a02",
+  "created_at": "2026-06-22T10:19:52",
+  "updated_at": "2026-06-22T10:19:52",
+  "invoices": {
+    "1ebfb13ae76e": {
+      "id": "1ebfb13ae76e",
+      "invoice_no": "INV-REVIEW-EDGE-001",
+      "customer_name": "Reviewer Edge Co",
+      "amount": 100.0,
+      "invoice_date": "2026-06-15",
+      "source_file": "zyx00129_reviewer_edge_invoices.csv",
+      "source_row": 2,
+      "status": "matched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:19:52"
+    },
+    "88a290891453": {
+      "id": "88a290891453",
+      "invoice_no": "INV-REVIEW-EDGE-002",
+      "customer_name": "Reviewer Edge Co",
+      "amount": 80.0,
+      "invoice_date": "2026-06-10",
+      "source_file": "zyx00129_reviewer_edge_invoices.csv",
+      "source_row": 3,
+      "status": "unmatched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:19:52"
+    }
+  },
+  "transactions": {
+    "9fe8c3f01367": {
+      "id": "9fe8c3f01367",
+      "txn_id": "TXN-EDGE-A1",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 40.0,
+      "txn_date": "2026-05-01",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 2,
+      "status": "unmatched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:19:52"
+    },
+    "1f9023592331": {
+      "id": "1f9023592331",
+      "txn_id": "TXN-EDGE-A2",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 60.0,
+      "txn_date": "2026-05-01",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 3,
+      "status": "unmatched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:19:52"
+    },
+    "c9a1358ab186": {
+      "id": "c9a1358ab186",
+      "txn_id": "TXN-EDGE-A3",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 30.0,
+      "txn_date": "2026-06-14",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 4,
+      "status": "matched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:19:52"
+    },
+    "cc60f9c2ae91": {
+      "id": "cc60f9c2ae91",
+      "txn_id": "TXN-EDGE-A4",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 70.0,
+      "txn_date": "2026-06-16",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 5,
+      "status": "matched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:19:52"
+    },
+    "7fe3230790c1": {
+      "id": "7fe3230790c1",
+      "txn_id": "TXN-EDGE-B1",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 30.0,
+      "txn_date": "2026-05-01",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 6,
+      "status": "unmatched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:19:52"
+    },
+    "d52261a753e2": {
+      "id": "d52261a753e2",
+      "txn_id": "TXN-EDGE-B2",
+      "counterparty": "Reviewer Edge Co",
+      "amount": 50.0,
+      "txn_date": "2026-05-01",
+      "source_file": "zyx00129_reviewer_edge_txns.csv",
+      "source_row": 7,
+      "status": "unmatched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:19:52"
+    }
+  },
+  "matches": {
+    "988ccb574767": {
+      "id": "988ccb574767",
+      "invoice_ids": [
+        "1ebfb13ae76e"
+      ],
+      "transaction_ids": [
+        "c9a1358ab186",
+        "cc60f9c2ae91"
+      ],
+      "match_type": "auto",
+      "matched_at": "2026-06-22T10:19:52",
+      "notes": "一对多匹配: 2笔流水合并, 总金额=100.00, 发票金额=100.00, 差额=0.0000",
+      "reversed": false,
+      "reversed_at": "",
+      "reversed_reason": ""
+    }
+  },
+  "history": [
+    {
+      "id": "be4378fdda33",
+      "action": "import_invoices",
+      "timestamp": "2026-06-22T10:19:52",
+      "details": {
+        "file": "zyx00129_reviewer_edge_invoices.csv",
+        "count": 2,
+        "encoding": "utf-8-sig"
+      }
+    },
+    {
+      "id": "5467e5fce7a3",
+      "action": "import_transactions",
+      "timestamp": "2026-06-22T10:19:52",
+      "details": {
+        "file": "zyx00129_reviewer_edge_txns.csv",
+        "count": 6,
+        "encoding": "utf-8-sig"
+      }
+    },
+    {
+      "id": "a3efb3bbd05f",
+      "action": "auto_match",
+      "timestamp": "2026-06-22T10:19:52",
+      "details": {
+        "matched_count": 1,
+        "invoice_ids_used": [
+          "1ebfb13ae76e"
+        ],
+        "transaction_ids_used": [
+          "c9a1358ab186",
+          "cc60f9c2ae91"
+        ],
+        "config": {
+          "amount_tolerance": 0.01,
+          "date_tolerance_days": 3
+        }
+      }
+    }
+  ],
+  "imported_files": {
+    "dcce23d0b62cd44f0c0d45a7a933b20069473a290bc6e6b25b1bf810c1bd3ce5": "zyx00129_reviewer_edge_invoices.csv @ 2026-06-22T10:19:52",
+    "b4278d8c58e6e3dc0e09d0f45d50a4672830be13d912fca92aec63af699ccf56": "zyx00129_reviewer_edge_txns.csv @ 2026-06-22T10:19:52"
+  }
+}

@@ -56,10 +56,13 @@ zyx-00129/
 ├── pyproject.toml
 ├── README.md
 ├── samples/
-│   ├── invoices_good.csv        # 正常发票样例（8行）
-│   ├── transactions_good.csv    # 正常流水样例（10行）
-│   ├── invoices_bad.csv         # 非法数据样例（含错误行）
-│   └── RULES.txt                # 默认规则说明
+│   ├── invoices_good.csv         # 正常发票样例（8行）
+│   ├── transactions_good.csv     # 正常流水样例（10行）
+│   ├── invoices_bad.csv          # 非法数据样例（含错误行）
+│   ├── invoices_regression.csv   # 边界回归：拼多多 2 张发票（6000+4000）
+│   ├── transactions_regression.csv # 边界回归：拼多多 6 笔流水（两条链路）
+│   ├── REGRESSION_NOTES.txt      # 边界回归数据设计说明
+│   └── RULES.txt                 # 默认规则说明
 └── invoice_reconcile/
     ├── __init__.py
     ├── __main__.py              # python -m invoice_reconcile 入口
@@ -134,7 +137,7 @@ irec report -f json -o rpt.json
 
 ## 验收命令链（完整流程）
 
-以下命令链覆盖所有验收要点：**自动匹配 1 笔 + 人工匹配 1 笔 + 非法行报错 + 重复导入拦截 + 一对多超出容差保持未解决 + 会话重启持久化验证**。
+以下命令链覆盖所有验收要点：**自动匹配 1 笔 + 人工匹配 1 笔 + 非法行报错 + 重复导入拦截 + 一对多超出容差保持未解决 + 会话重启持久化验证 + 一对多多候选边界不漏判**。
 
 ### 步骤 1：初始化 & 配置别名
 
@@ -208,6 +211,46 @@ irec show unmatched
 #   TXN20260622010 (网易 20000, 6/22) -> 无对应发票
 # 超出容差的一对多关系（如 9400 + 9400+？ 凑不到18900）将保持未解决状态
 ```
+
+### 步骤 4.5：边界场景回归（多候选一对多不漏判）
+
+```bash
+# 先配置拼多多别名（如果要单独跑这一步）
+# irec config alias "拼多多科技有限公司" "拼多多" "PDD"
+
+# 导入边界回归数据（两组场景，详细设计见 samples/REGRESSION_NOTES.txt）
+irec imp invoice samples/invoices_regression.csv
+# => 2 张发票：INV-2026-009(6000@6/15) + INV-2026-010(4000@6/10)
+
+irec imp txn samples/transactions_regression.csv
+# => 6 笔流水（按组合设计顺序）：
+#     T1=1000@5/1  T2=5000@5/1   (首组合 6000 但日期超 ±3 容差 44 天)
+#     T3=2000@6/14 T4=4000@6/16  (次组合 6000 日期 1 天内 合格)
+#     T5=1500@5/1  T6=2500@5/1   (唯一组合 4000 但日期超容差)
+
+irec match
+# 关键断言（请对照 samples/REGRESSION_NOTES.txt）：
+#   ✓ 链路 A：INV-2026-009 匹配上的流水应是 T3+T4（日期合格组合）
+#     而不是先扫到的 T1+T2（超容差组合）。
+#     修复前：T1+T2 金额命中但日期被外层丢弃后不再继续，整组留在待复核
+#     修复后：日期校验下沉到子集和搜索，T1+T2 被过滤 → 继续遍历 → 命中 T3+T4
+#
+#   ✓ 链路 B：INV-2026-010 对应的 T5+T6 金额合计 4000 但所有候选日期都超容差，
+#     应全部保留在未匹配列表（irec show unmatched），且状态为 "unmatched"。
+#     这和 INV-2026-005 / INV-2026-008 的"普通金额不符"未匹配是两类根因，
+#     前者是日期容差失败、后者是金额根本凑不到目标值——两者都留在未匹配，
+#     但报表应能区分金额 vs 日期根因（可看 matches.csv 的匹配注释，
+#     或用 reporter.json 中 unmatched_* 字段人工核对，避免把边界误判为普通金额不符）。
+
+irec show unmatched
+# 预期边界回归相关的未匹配条目（链路B，共 3 条）：
+#   INV-2026-010 拼多多 4000 (日期容差失败的唯一候选，不是"金额凑不出")
+#   TXN20260601011/TXN20260601012 拼多多 1000+5000 (链路A里被过滤掉的不合格组合)
+#   TXN20260601015/TXN20260601016 拼多多 1500+2500 (链路B里日期全不合格的组合)
+
+# 或直接运行一次性自动化回归脚本（包含 import→match→report→断言→重启持久化）：
+python _test_boundary_regression.py
+# => 结束时输出 [ALL PASSED] 边界场景回归通过
 
 ### 步骤 5：人工匹配 1 笔 + 挂起 + 撤销演示
 
@@ -287,9 +330,11 @@ irec show history -n 30
 | 自动匹配 ≥1 笔 | `irec match` 后 `irec show matches` | 至少一对一匹配（华为/阿里/腾讯/字节/京东/美团多对一） |
 | 人工匹配 1 笔 | `irec manual match -i INV-2026-008 -t TXN20260620009` | 成功，状态刷新 |
 | 超出容差一对多保持未解决 | `irec show unmatched` 中百度项 | INV-2026-005 金额 18900 不与 9400 强制多对一 |
+| **链路A：首个命中组合日期不合格但后续组合应成功匹配** | `irec match` 导入 `*_regression.csv` 后查看 matches | INV-2026-009 应与 TXN...013+...014（日期合格）匹配，**不能**匹配 ...011+...012（日期超容差），也**不能**留在未匹配 |
+| **链路B：一对多金额命中但全部候选组合超日期容差 → 保持未解决** | `irec show unmatched` + `irec report` 的 unmatched_* | INV-2026-010 及 ...015/...016 留在未匹配列表；注意与"普通金额凑不出"的 INV-2026-005/008 区分类别，验收时不能把该边界误判为普通金额不符 |
 | 历史记录完整 | `irec show history` | 导入、匹配、挂起、撤销均有记录 |
-| 会话重启持久化 | `irec status` 重启后对照 | session_id、合计、未处理、撤销记录均不变 |
-| 报告导出 | `irec report` | JSON + 5 张 CSV 生成 |
+| 会话重启持久化 | `irec status` 重启后对照 | session_id、合计、未处理、撤销记录、链路A/B 匹配结果、未匹配列表均不变 |
+| 报告导出 | `irec report` | JSON + 5 张 CSV 生成，含链路A拼多多匹配明细、链路B拼多多未匹配条目 |
 
 ---
 

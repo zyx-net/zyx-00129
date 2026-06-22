@@ -1,0 +1,5 @@
+﻿ID,流水号,对方单位,金额,交易日期,挂起,挂起原因,来源文件,来源行号
+9fe8c3f01367,TXN-EDGE-A1,Reviewer Edge Co,40.0,2026-05-01,否,,zyx00129_reviewer_edge_txns.csv,2
+1f9023592331,TXN-EDGE-A2,Reviewer Edge Co,60.0,2026-05-01,否,,zyx00129_reviewer_edge_txns.csv,3
+7fe3230790c1,TXN-EDGE-B1,Reviewer Edge Co,30.0,2026-05-01,否,,zyx00129_reviewer_edge_txns.csv,6
+d52261a753e2,TXN-EDGE-B2,Reviewer Edge Co,50.0,2026-05-01,否,,zyx00129_reviewer_edge_txns.csv,7

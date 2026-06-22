@@ -1,11 +1,11 @@
 {
-  "session_id": "0adeb1c46db5",
-  "name": "default",
-  "created_at": "2026-06-22T09:52:56",
-  "updated_at": "2026-06-22T10:08:21",
+  "session_id": "f5cbfd8503a9",
+  "name": "review_a02",
+  "created_at": "2026-06-22T10:18:39",
+  "updated_at": "2026-06-22T10:18:43",
   "invoices": {
-    "3ba8153f8929": {
-      "id": "3ba8153f8929",
+    "c0949ca12b50": {
+      "id": "c0949ca12b50",
       "invoice_no": "INV-2026-001",
       "customer_name": "华为技术有限公司",
       "amount": 12500.0,
@@ -15,10 +15,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "66b60e1c6572": {
-      "id": "66b60e1c6572",
+    "bd77ccde6fed": {
+      "id": "bd77ccde6fed",
       "invoice_no": "INV-2026-002",
       "customer_name": "阿里巴巴集团",
       "amount": 8750.5,
@@ -28,10 +28,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "7b975eb3900f": {
-      "id": "7b975eb3900f",
+    "da047e8f2a81": {
+      "id": "da047e8f2a81",
       "invoice_no": "INV-2026-003",
       "customer_name": "腾讯科技",
       "amount": 33200.0,
@@ -41,10 +41,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "e376d2d51d21": {
-      "id": "e376d2d51d21",
+    "d4f452d1e4fb": {
+      "id": "d4f452d1e4fb",
       "invoice_no": "INV-2026-004",
       "customer_name": "字节跳动",
       "amount": 5600.75,
@@ -54,10 +54,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "10a292cffb34": {
-      "id": "10a292cffb34",
+    "73fefbab7eee": {
+      "id": "73fefbab7eee",
       "invoice_no": "INV-2026-005",
       "customer_name": "百度在线",
       "amount": 18900.0,
@@ -67,10 +67,10 @@
       "status": "unmatched",
       "suspended": true,
       "suspend_reason": "合同金额争议，等待商务确认",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "92ef71d8cd8d": {
-      "id": "92ef71d8cd8d",
+    "fc8b33133773": {
+      "id": "fc8b33133773",
       "invoice_no": "INV-2026-006",
       "customer_name": "京东集团",
       "amount": 4200.0,
@@ -80,10 +80,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "2bafe55365a0": {
-      "id": "2bafe55365a0",
+    "435d6a7d05f3": {
+      "id": "435d6a7d05f3",
       "invoice_no": "INV-2026-007",
       "customer_name": "美团点评",
       "amount": 7800.0,
@@ -93,10 +93,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "601d4fb6c40f": {
-      "id": "601d4fb6c40f",
+    "f722a3618096": {
+      "id": "f722a3618096",
       "invoice_no": "INV-2026-008",
       "customer_name": "小米科技",
       "amount": 9200.0,
@@ -106,12 +106,12 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     }
   },
   "transactions": {
-    "51470b45952c": {
-      "id": "51470b45952c",
+    "8acecd8455a4": {
+      "id": "8acecd8455a4",
       "txn_id": "TXN20260601001",
       "counterparty": "华为技术有限公司",
       "amount": 12500.0,
@@ -121,10 +121,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "9c6ea2adcb2e": {
-      "id": "9c6ea2adcb2e",
+    "d72f951b1b53": {
+      "id": "d72f951b1b53",
       "txn_id": "TXN20260605002",
       "counterparty": "阿里",
       "amount": 8750.5,
@@ -134,10 +134,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "c40170dd3165": {
-      "id": "c40170dd3165",
+    "c4217e803f72": {
+      "id": "c4217e803f72",
       "txn_id": "TXN20260608003",
       "counterparty": "腾讯",
       "amount": 33200.0,
@@ -147,10 +147,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "2c9582342a54": {
-      "id": "2c9582342a54",
+    "02a764337b54": {
+      "id": "02a764337b54",
       "txn_id": "TXN20260610004",
       "counterparty": "字节",
       "amount": 5600.75,
@@ -160,10 +160,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "8b3a57eb2efe": {
-      "id": "8b3a57eb2efe",
+    "89a1b6ec864b": {
+      "id": "89a1b6ec864b",
       "txn_id": "TXN20260612005",
       "counterparty": "百度",
       "amount": 9400.0,
@@ -173,10 +173,10 @@
       "status": "unmatched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "97d89707d1dc": {
-      "id": "97d89707d1dc",
+    "ee5f35880ce5": {
+      "id": "ee5f35880ce5",
       "txn_id": "TXN20260612006",
       "counterparty": "京东",
       "amount": 4200.0,
@@ -186,10 +186,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "58a18463a5d9": {
-      "id": "58a18463a5d9",
+    "b28cc88a8dcc": {
+      "id": "b28cc88a8dcc",
       "txn_id": "TXN20260618007",
       "counterparty": "美团",
       "amount": 3000.0,
@@ -199,10 +199,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "21e9114e1b76": {
-      "id": "21e9114e1b76",
+    "f59e8960a91d": {
+      "id": "f59e8960a91d",
       "txn_id": "TXN20260618008",
       "counterparty": "美团",
       "amount": 4800.0,
@@ -212,10 +212,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "bd6ebec2c373": {
-      "id": "bd6ebec2c373",
+    "67263d615c22": {
+      "id": "67263d615c22",
       "txn_id": "TXN20260620009",
       "counterparty": "小米",
       "amount": 9500.0,
@@ -225,10 +225,10 @@
       "status": "matched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     },
-    "5fa72fe6a777": {
-      "id": "5fa72fe6a777",
+    "0ddfd7981f5d": {
+      "id": "0ddfd7981f5d",
       "txn_id": "TXN20260622010",
       "counterparty": "网易",
       "amount": 20000.0,
@@ -238,127 +238,112 @@
       "status": "unmatched",
       "suspended": false,
       "suspend_reason": "",
-      "created_at": "2026-06-22T09:52:59"
+      "created_at": "2026-06-22T10:18:41"
     }
   },
   "matches": {
-    "9e0a4b6364a9": {
-      "id": "9e0a4b6364a9",
+    "a840312cc458": {
+      "id": "a840312cc458",
       "invoice_ids": [
-        "3ba8153f8929"
+        "c0949ca12b50"
       ],
       "transaction_ids": [
-        "51470b45952c"
+        "8acecd8455a4"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T09:53:00",
+      "matched_at": "2026-06-22T10:18:42",
       "notes": "一对一匹配: 客户=华为技术有限公司, 金额差=0.0000, 日期差=1天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "deb54c92a5ba": {
-      "id": "deb54c92a5ba",
+    "c766b5fa2e92": {
+      "id": "c766b5fa2e92",
       "invoice_ids": [
-        "66b60e1c6572"
+        "bd77ccde6fed"
       ],
       "transaction_ids": [
-        "9c6ea2adcb2e"
+        "d72f951b1b53"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T09:53:00",
+      "matched_at": "2026-06-22T10:18:42",
       "notes": "一对一匹配: 客户=阿里巴巴集团, 金额差=0.0000, 日期差=0天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "ec43739a2205": {
-      "id": "ec43739a2205",
+    "025224fbf839": {
+      "id": "025224fbf839",
       "invoice_ids": [
-        "7b975eb3900f"
+        "da047e8f2a81"
       ],
       "transaction_ids": [
-        "c40170dd3165"
+        "c4217e803f72"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T09:53:00",
+      "matched_at": "2026-06-22T10:18:42",
       "notes": "一对一匹配: 客户=腾讯科技, 金额差=0.0000, 日期差=1天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "3d33eaae2b2f": {
-      "id": "3d33eaae2b2f",
+    "609fa22ebd38": {
+      "id": "609fa22ebd38",
       "invoice_ids": [
-        "e376d2d51d21"
+        "d4f452d1e4fb"
       ],
       "transaction_ids": [
-        "2c9582342a54"
+        "02a764337b54"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T09:53:00",
+      "matched_at": "2026-06-22T10:18:42",
       "notes": "一对一匹配: 客户=字节跳动, 金额差=0.0000, 日期差=2天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "881536a61a6f": {
-      "id": "881536a61a6f",
+    "732f3b8ffea1": {
+      "id": "732f3b8ffea1",
       "invoice_ids": [
-        "92ef71d8cd8d"
+        "fc8b33133773"
       ],
       "transaction_ids": [
-        "97d89707d1dc"
+        "ee5f35880ce5"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T09:53:00",
+      "matched_at": "2026-06-22T10:18:42",
       "notes": "一对一匹配: 客户=京东集团, 金额差=0.0000, 日期差=1天",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "262d2cab3397": {
-      "id": "262d2cab3397",
+    "520a8d416b9b": {
+      "id": "520a8d416b9b",
       "invoice_ids": [
-        "2bafe55365a0"
+        "435d6a7d05f3"
       ],
       "transaction_ids": [
-        "58a18463a5d9",
-        "21e9114e1b76"
+        "b28cc88a8dcc",
+        "f59e8960a91d"
       ],
       "match_type": "auto",
-      "matched_at": "2026-06-22T09:53:00",
+      "matched_at": "2026-06-22T10:18:42",
       "notes": "一对多匹配: 2笔流水合并, 总金额=7800.00, 发票金额=7800.00, 差额=0.0000",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
     },
-    "e438c9439079": {
-      "id": "e438c9439079",
+    "a5b6602e1372": {
+      "id": "a5b6602e1372",
       "invoice_ids": [
-        "601d4fb6c40f"
+        "f722a3618096"
       ],
       "transaction_ids": [
-        "bd6ebec2c373"
+        "67263d615c22"
       ],
       "match_type": "manual",
-      "matched_at": "2026-06-22T09:53:01",
+      "matched_at": "2026-06-22T10:18:42",
       "notes": "差额300元为手续费，财务确认入账",
-      "reversed": true,
-      "reversed_at": "2026-06-22T09:54:05",
-      "reversed_reason": "补充撤销演示"
-    },
-    "c71ce453cfc4": {
-      "id": "c71ce453cfc4",
-      "invoice_ids": [
-        "601d4fb6c40f"
-      ],
-      "transaction_ids": [
-        "bd6ebec2c373"
-      ],
-      "match_type": "manual",
-      "matched_at": "2026-06-22T09:54:05",
-      "notes": "撤销后财务二次确认入账，手续费300元",
       "reversed": false,
       "reversed_at": "",
       "reversed_reason": ""
@@ -366,9 +351,9 @@
   },
   "history": [
     {
-      "id": "d5d9919548c2",
+      "id": "0ebcdd39812a",
       "action": "import_invoices",
-      "timestamp": "2026-06-22T09:52:59",
+      "timestamp": "2026-06-22T10:18:41",
       "details": {
         "file": "invoices_good.csv",
         "count": 8,
@@ -376,9 +361,9 @@
       }
     },
     {
-      "id": "9bfd0924b710",
+      "id": "f96350a743e1",
       "action": "import_transactions",
-      "timestamp": "2026-06-22T09:52:59",
+      "timestamp": "2026-06-22T10:18:41",
       "details": {
         "file": "transactions_good.csv",
         "count": 10,
@@ -386,27 +371,27 @@
       }
     },
     {
-      "id": "d7b45aedeb6c",
+      "id": "bb59d489e702",
       "action": "auto_match",
-      "timestamp": "2026-06-22T09:53:00",
+      "timestamp": "2026-06-22T10:18:42",
       "details": {
         "matched_count": 6,
         "invoice_ids_used": [
-          "2bafe55365a0",
-          "3ba8153f8929",
-          "66b60e1c6572",
-          "7b975eb3900f",
-          "92ef71d8cd8d",
-          "e376d2d51d21"
+          "435d6a7d05f3",
+          "bd77ccde6fed",
+          "c0949ca12b50",
+          "d4f452d1e4fb",
+          "da047e8f2a81",
+          "fc8b33133773"
         ],
         "transaction_ids_used": [
-          "21e9114e1b76",
-          "2c9582342a54",
-          "51470b45952c",
-          "58a18463a5d9",
-          "97d89707d1dc",
-          "9c6ea2adcb2e",
-          "c40170dd3165"
+          "02a764337b54",
+          "8acecd8455a4",
+          "b28cc88a8dcc",
+          "c4217e803f72",
+          "d72f951b1b53",
+          "ee5f35880ce5",
+          "f59e8960a91d"
         ],
         "config": {
           "amount_tolerance": 0.01,
@@ -415,16 +400,16 @@
       }
     },
     {
-      "id": "adf08afe38ca",
+      "id": "6461ea255b47",
       "action": "manual_match",
-      "timestamp": "2026-06-22T09:53:01",
+      "timestamp": "2026-06-22T10:18:42",
       "details": {
-        "match_id": "e438c9439079",
+        "match_id": "a5b6602e1372",
         "invoice_ids": [
-          "601d4fb6c40f"
+          "f722a3618096"
         ],
         "transaction_ids": [
-          "bd6ebec2c373"
+          "67263d615c22"
         ],
         "invoice_nos": [
           "INV-2026-008"
@@ -439,72 +424,18 @@
       }
     },
     {
-      "id": "7e887e5ea7d5",
+      "id": "95b650089ae2",
       "action": "suspend_invoice",
-      "timestamp": "2026-06-22T09:53:02",
+      "timestamp": "2026-06-22T10:18:43",
       "details": {
-        "invoice_id": "10a292cffb34",
+        "invoice_id": "73fefbab7eee",
         "invoice_no": "INV-2026-005",
         "reason": "合同金额争议，等待商务确认"
-      }
-    },
-    {
-      "id": "ae10549c3573",
-      "action": "reverse_match",
-      "timestamp": "2026-06-22T09:54:05",
-      "details": {
-        "match_id": "e438c9439079",
-        "match_type": "manual",
-        "invoice_ids": [
-          "601d4fb6c40f"
-        ],
-        "transaction_ids": [
-          "bd6ebec2c373"
-        ],
-        "reason": "补充撤销演示"
-      }
-    },
-    {
-      "id": "d597b0ef3600",
-      "action": "manual_match",
-      "timestamp": "2026-06-22T09:54:05",
-      "details": {
-        "match_id": "c71ce453cfc4",
-        "invoice_ids": [
-          "601d4fb6c40f"
-        ],
-        "transaction_ids": [
-          "bd6ebec2c373"
-        ],
-        "invoice_nos": [
-          "INV-2026-008"
-        ],
-        "txn_ids": [
-          "TXN20260620009"
-        ],
-        "invoice_amount_sum": 9200.0,
-        "transaction_amount_sum": 9500.0,
-        "diff_amount": 300.0,
-        "notes": "撤销后财务二次确认入账，手续费300元"
-      }
-    },
-    {
-      "id": "50279bc51b09",
-      "action": "auto_match",
-      "timestamp": "2026-06-22T10:08:21",
-      "details": {
-        "matched_count": 0,
-        "invoice_ids_used": [],
-        "transaction_ids_used": [],
-        "config": {
-          "amount_tolerance": 0.01,
-          "date_tolerance_days": 3
-        }
       }
     }
   ],
   "imported_files": {
-    "0e5c4d09162d75fffc3b898d858dfdce26fce0f9c3df35abe4ab1f5b65701ac4": "invoices_good.csv @ 2026-06-22T09:52:59",
-    "544b29c885141a96d4c4b0f9811453e42a24c92d1a94ced22280105ead29346d": "transactions_good.csv @ 2026-06-22T09:52:59"
+    "0e5c4d09162d75fffc3b898d858dfdce26fce0f9c3df35abe4ab1f5b65701ac4": "invoices_good.csv @ 2026-06-22T10:18:41",
+    "544b29c885141a96d4c4b0f9811453e42a24c92d1a94ced22280105ead29346d": "transactions_good.csv @ 2026-06-22T10:18:41"
   }
 }
