@@ -1,0 +1,2 @@
+[console_scripts]
+irec = invoice_reconcile.cli:main

@@ -1,0 +1,103 @@
+{
+  "session_id": "822dadc0c254",
+  "name": "review-edge",
+  "created_at": "2026-06-22T10:00:10",
+  "updated_at": "2026-06-22T10:02:06",
+  "invoices": {
+    "5f6b9590e8f9": {
+      "id": "5f6b9590e8f9",
+      "invoice_no": "INV-EDGE-001",
+      "customer_name": "边界客户",
+      "amount": 100.0,
+      "invoice_date": "2026-06-10",
+      "source_file": "zyx00129_review_edge_invoices.csv",
+      "source_row": 2,
+      "status": "unmatched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:02:00"
+    }
+  },
+  "transactions": {
+    "98d2591a4af6": {
+      "id": "98d2591a4af6",
+      "txn_id": "TXN-EDGE-001",
+      "counterparty": "边界客户",
+      "amount": 60.0,
+      "txn_date": "2026-06-25",
+      "source_file": "zyx00129_review_edge_txns.csv",
+      "source_row": 2,
+      "status": "unmatched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:02:00"
+    },
+    "1ea1564f2f72": {
+      "id": "1ea1564f2f72",
+      "txn_id": "TXN-EDGE-002",
+      "counterparty": "边界客户",
+      "amount": 40.0,
+      "txn_date": "2026-06-10",
+      "source_file": "zyx00129_review_edge_txns.csv",
+      "source_row": 3,
+      "status": "unmatched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:02:00"
+    },
+    "f2a219a7b715": {
+      "id": "f2a219a7b715",
+      "txn_id": "TXN-EDGE-003",
+      "counterparty": "边界客户",
+      "amount": 60.0,
+      "txn_date": "2026-06-11",
+      "source_file": "zyx00129_review_edge_txns.csv",
+      "source_row": 4,
+      "status": "unmatched",
+      "suspended": false,
+      "suspend_reason": "",
+      "created_at": "2026-06-22T10:02:00"
+    }
+  },
+  "matches": {},
+  "history": [
+    {
+      "id": "b9f098986bec",
+      "action": "import_invoices",
+      "timestamp": "2026-06-22T10:02:00",
+      "details": {
+        "file": "zyx00129_review_edge_invoices.csv",
+        "count": 1,
+        "encoding": "utf-8-sig"
+      }
+    },
+    {
+      "id": "8f56d394c915",
+      "action": "import_transactions",
+      "timestamp": "2026-06-22T10:02:00",
+      "details": {
+        "file": "zyx00129_review_edge_txns.csv",
+        "count": 3,
+        "encoding": "utf-8-sig"
+      }
+    },
+    {
+      "id": "dc808ea48da9",
+      "action": "auto_match",
+      "timestamp": "2026-06-22T10:02:06",
+      "details": {
+        "matched_count": 0,
+        "invoice_ids_used": [],
+        "transaction_ids_used": [],
+        "config": {
+          "amount_tolerance": 0.01,
+          "date_tolerance_days": 3
+        }
+      }
+    }
+  ],
+  "imported_files": {
+    "67297019d0b4bcf8a14ad1aafa7a86ce6d1c8e3b17e17479a6f94b2c6d0b157d": "zyx00129_review_edge_invoices.csv @ 2026-06-22T10:02:00",
+    "aa774b07855449ed6df022ff574a63f718807815582754adfe6355d3fa85c2ea": "zyx00129_review_edge_txns.csv @ 2026-06-22T10:02:00"
+  }
+}

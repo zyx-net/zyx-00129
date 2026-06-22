@@ -1,0 +1,305 @@
+Metadata-Version: 2.4
+Name: invoice-reconcile
+Version: 1.0.0
+Summary: 发票到款核对CLI工具 - 支持多命令、本地会话、配置文件、自动匹配、人工复核
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.1.0
+Requires-Dist: python-dateutil>=2.8.0
+
+# 发票到款核对 CLI (irec)
+
+多命令结构的发票与银行流水核对工具。支持本地会话持久化、配置文件、自动/人工匹配、挂起/撤销、操作历史记录与核对报告导出。
+
+---
+
+## 特性
+
+- **多命令 CLI**：基于 Click，结构化子命令（init / config / session / imp / match / manual / list / report 等）
+- **本地会话**：JSON 持久化，关闭重启不变，多会话切换
+- **配置文件**：金额容差、日期容差、客户名别名、匹配策略
+- **智能导入**：
+  - UTF-8/GBK/GB18030 自动编码检测
+  - 中文/英文表头自动识别（发票号 / 客户名称 / 金额 / 开票日期 等）
+  - **非法金额/日期行会精确到行号报错**
+  - **同一文件重复导入会被去重拦截**（按内容+文件名哈希）
+- **自动匹配引擎**：
+  - 规则1：一对一（客户名 + 金额精确 + 日期容差）
+  - 规则2：多对一（同客户多发票合并匹配一笔流水）
+  - 规则3：一对多（同客户多流水合并匹配一张发票）
+  - **超出容差的一对多关系保持未解决**（不强制匹配）
+- **人工复核**：人工匹配、挂起、取消挂起、撤销
+- **完整历史**：所有操作写入不可变历史链
+- **报告导出**：JSON 总览 + CSV 多表（汇总、匹配明细、未匹配、撤销记录）
+
+---
+
+## 安装
+
+```bash
+cd zyx-00129
+pip install -e .
+```
+
+安装后提供命令 `irec`：
+
+```bash
+irec --help
+```
+
+---
+
+## 项目结构
+
+```
+zyx-00129/
+├── pyproject.toml
+├── README.md
+├── samples/
+│   ├── invoices_good.csv        # 正常发票样例（8行）
+│   ├── transactions_good.csv    # 正常流水样例（10行）
+│   ├── invoices_bad.csv         # 非法数据样例（含错误行）
+│   └── RULES.txt                # 默认规则说明
+└── invoice_reconcile/
+    ├── __init__.py
+    ├── __main__.py              # python -m invoice_reconcile 入口
+    ├── cli.py                   # 多命令 CLI 主入口
+    ├── config.py                # 配置文件管理
+    ├── session.py               # 会话持久化 & 数据模型
+    ├── importer.py              # CSV 导入 & 校验 & 去重
+    ├── matcher.py               # 自动匹配引擎
+    ├── manual.py                # 人工匹配/挂起/撤销
+    └── reporter.py              # 核对报告构建与导出
+```
+
+---
+
+## 默认规则（.irec_config.json）
+
+```json
+{
+  "amount_tolerance": 0.01,
+  "date_tolerance_days": 3,
+  "customer_name_aliases": {},
+  "match_strategy": "amount_date_name",
+  "session_dir": ".irec_sessions",
+  "default_session": "default"
+}
+```
+
+- 金额容差：±0.01 元
+- 日期容差：±3 天
+- 客户名别名：通过 `irec config alias <标准名> <别名1> <别名2>` 配置
+
+---
+
+## 命令速览
+
+```
+irec init                          # 初始化（创建配置 + 默认会话）
+irec config show                   # 查看配置
+irec config alias 华为技术有限公司 华为
+irec config set days_tol 5
+
+irec session list                  # 列出所有会话
+irec session create may_2026       # 创建新会话
+irec session switch default        # 切换会话
+irec session delete old --yes
+
+irec status                        # 当前会话状态（核心面板）
+
+irec imp invoice samples/invoices_good.csv       # 导入发票
+irec imp txn samples/transactions_good.csv       # 导入流水
+
+irec match                         # 执行自动匹配
+irec match --dry-run               # 预览
+
+irec manual match -i INV-001 -t TXN001 -n "备注"
+irec manual suspend-inv INV-007 -r "合同争议"
+irec manual unsuspend-inv INV-007
+irec manual reverse <match_id> -r "撤销原因"
+
+irec show unmatched                # 查看待复核列表
+irec show unmatched --with-suspended
+irec show matches                  # 有效匹配
+irec show matches --all            # 含已撤销
+irec show history -n 20
+irec show history --action reverse_match
+
+irec report -o irec_report         # 导出 JSON+CSV 报告
+irec report -f json -o rpt.json
+```
+
+---
+
+## 验收命令链（完整流程）
+
+以下命令链覆盖所有验收要点：**自动匹配 1 笔 + 人工匹配 1 笔 + 非法行报错 + 重复导入拦截 + 一对多超出容差保持未解决 + 会话重启持久化验证**。
+
+### 步骤 1：初始化 & 配置别名
+
+```bash
+# 清理旧状态（首次运行时）
+# Remove-Item -Recurse -Force .irec_sessions,.irec_config.json,.irec_state.json,irec_report* -ErrorAction SilentlyContinue
+
+pip install -e .
+
+irec init
+# => 配置初始化，默认会话创建
+
+# 设置客户名别名（样例数据中流水使用的是简称）
+irec config alias "华为技术有限公司" "华为"
+irec config alias "阿里巴巴集团" "阿里" "Alibaba"
+irec config alias "腾讯科技" "腾讯"
+irec config alias "字节跳动" "字节" "ByteDance"
+irec config alias "百度在线" "百度"
+irec config alias "京东集团" "京东"
+irec config alias "美团点评" "美团"
+irec config alias "小米科技" "小米"
+
+irec config show
+irec status
+```
+
+### 步骤 2：导入发票 & 流水（验证非法行报错）
+
+```bash
+# 先尝试导入非法发票 -> 应带行号报错
+irec imp invoice samples/invoices_bad.csv
+# => 报错示例：第2行: 无法识别的金额格式... / 第5行: 无法识别的日期格式...
+
+# 导入正常数据
+irec imp invoice samples/invoices_good.csv
+# => 导入 8 张发票
+irec imp txn samples/transactions_good.csv
+# => 导入 10 笔流水
+
+irec status
+```
+
+### 步骤 3：重复导入拦截
+
+```bash
+irec imp invoice samples/invoices_good.csv
+# => 错误：文件已导入，不能重复入账（带文件哈希标识）
+irec imp txn samples/transactions_good.csv
+# => 错误：文件已导入，不能重复入账
+```
+
+### 步骤 4：执行自动匹配
+
+```bash
+irec match --dry-run       # 预览
+irec match                 # 正式执行
+irec status
+irec show matches
+# 预期自动匹配成功的 1 对 1 关系：
+#   INV-2026-001 (华为 12500, 6/1)  <-> TXN20260601001 (华为 12500, 6/2, 日期差1)
+#   INV-2026-002 (阿里 8750.5, 6/5)  <-> TXN20260605002 (阿里 8750.5, 6/5, 日期差0)
+#   INV-2026-003 (腾讯 33200, 6/8)   <-> TXN20260608003 (腾讯 33200, 6/7, 日期差1)
+#   INV-2026-004 (字节 5600.75, 6/10)<-> TXN20260610004 (字节 5600.75, 6/12, 日期差2)
+#   INV-2026-006 (京东 4200, 6/15)   <-> TXN20260612006 (京东 4200, 6/16, 日期差1)
+#   INV-2026-007 (美团 7800, 6/18)   <-> TXN20260618007 + TXN20260618008 (3000+4800=7800, 多对一)
+
+irec show unmatched
+# 预期未匹配（需人工判断的项）：
+#   INV-2026-005 (百度 18900, 6/12)  vs TXN20260612005 (百度 9400, 6/13)  -> 金额差很大
+#   INV-2026-008 (小米 9200, 6/20)   vs TXN20260620009 (小米 9500, 6/21)  -> 金额差300>0.01容差
+#   TXN20260622010 (网易 20000, 6/22) -> 无对应发票
+# 超出容差的一对多关系（如 9400 + 9400+？ 凑不到18900）将保持未解决状态
+```
+
+### 步骤 5：人工匹配 1 笔 + 挂起 + 撤销演示
+
+```bash
+# 人工匹配 小米 发票 INV-2026-008 与 流水 TXN20260620009（差额300，会计确认是手续费）
+irec manual match -i INV-2026-008 -t TXN20260620009 -n "差额300元为手续费，财务确认入账"
+# => 完成第 2 笔要求的人工匹配
+
+irec status
+irec show matches
+
+# 挂起百度发票（合同争议）
+irec manual suspend-inv INV-2026-005 -r "合同金额争议，等待商务确认"
+irec show unmatched --with-suspended
+
+# 撤销刚才的人工匹配（演示撤销功能），然后再重新匹配上
+# 先找到 match_id（在 list matches 中查看）
+# 比如小米那组匹配的 ID 是 <match_id>：
+# irec manual reverse <match_id> -r "演示撤销"
+# 然后重新匹配回来：
+# irec manual match -i INV-2026-008 -t TXN20260620009 -n "差额300元为手续费，财务确认入账"
+
+irec show history -n 10
+```
+
+### 步骤 6：导出报告
+
+```bash
+irec report -o irec_report
+# => 导出：
+#   irec_report.json                  总报告 JSON
+#   irec_report/summary.csv           汇总表
+#   irec_report/matches.csv           匹配明细
+#   irec_report/unmatched_invoices.csv  未匹配发票
+#   irec_report/unmatched_transactions.csv 未匹配流水
+#   irec_report/reversed_matches.csv  撤销记录
+
+irec status
+```
+
+### 步骤 7：会话持久化验证（关闭再启动不变）
+
+```bash
+# 记录当前关键信息：
+irec status
+irec show history --action reverse_match
+irec show unmatched
+
+# 记录会话 ID、报表合计、撤销记录数、未匹配列表内容
+
+# 模拟关闭再启动（会话数据在 .irec_sessions/default.json 中持久化）
+# 这里实际不退出，直接重新读取验证：
+irec session list
+irec status
+# 关键断言：
+#   ✓ 会话编号 (session_id) 不变
+#   ✓ 未匹配列表条数和内容不变
+#   ✓ 报表合计 (invoices.amount_total / transactions.amount_total 等) 不变
+#   ✓ 撤销记录（如果执行了 reverse）依然存在
+#   ✓ 操作历史链完整
+
+# 再次打开验证持久化
+irec show matches
+irec show history -n 30
+```
+
+---
+
+## 验收要点清单
+
+| 验收项 | 验证命令 / 位置 | 期望结果 |
+|--------|----------------|---------|
+| 样例发票导入 | `irec imp invoice samples/invoices_good.csv` | 成功，导入 8 张 |
+| 样例流水导入 | `irec imp txn samples/transactions_good.csv` | 成功，导入 10 笔 |
+| 非法行带行号报错 | `irec imp invoice samples/invoices_bad.csv` | 报错信息形如 "第2行: ..." |
+| 重复导入拦截 | 再次执行 `irec imp invoice samples/invoices_good.csv` | 提示已导入，不入账 |
+| 自动匹配 ≥1 笔 | `irec match` 后 `irec show matches` | 至少一对一匹配（华为/阿里/腾讯/字节/京东/美团多对一） |
+| 人工匹配 1 笔 | `irec manual match -i INV-2026-008 -t TXN20260620009` | 成功，状态刷新 |
+| 超出容差一对多保持未解决 | `irec show unmatched` 中百度项 | INV-2026-005 金额 18900 不与 9400 强制多对一 |
+| 历史记录完整 | `irec show history` | 导入、匹配、挂起、撤销均有记录 |
+| 会话重启持久化 | `irec status` 重启后对照 | session_id、合计、未处理、撤销记录均不变 |
+| 报告导出 | `irec report` | JSON + 5 张 CSV 生成 |
+
+---
+
+## 常见问题
+
+**Q: 表头列名不完全一致怎么办？**
+A: 查看 `importer.py` 中的 `INVOICE_COLUMN_ALIASES` 和 `TXN_COLUMN_ALIASES`，已覆盖常见中英文列名，可按需扩展。
+
+**Q: 编码乱码？**
+A: 已自动探测 utf-8-sig / utf-8 / gbk / gb18030，大多数 Excel 导出的 CSV 可正常处理。
+
+**Q: 如何同时运行多个独立核对任务？**
+A: `irec session create 2026Q2` 后 `irec session switch 2026Q2`，每个会话完全独立存储。
