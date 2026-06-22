@@ -1,14 +1,14 @@
 {
-  "precheck_id": "precheck_9a6494ed419a",
-  "audit_file": "audit_A_full.irecaudit",
-  "audit_path": "D:\\workSpace\\AI__SPACE\\zyx-00129\\.irec_audits\\audit_A_full.irecaudit",
-  "audit_id": "audit_0af94c78501d",
-  "precheck_at": "2026-06-22T14:32:21",
-  "target_session_name": "cmd_hint_test",
+  "precheck_id": "precheck_6cf3ee4413c2",
+  "audit_file": "may_2026_final.irecaudit",
+  "audit_path": "may_2026_final.irecaudit",
+  "audit_id": "audit_092487027255",
+  "precheck_at": "2026-06-22T15:25:36",
+  "target_session_name": "audit_drift_check",
   "conflict_mode": "overwrite",
   "apply_config": true,
   "session_exists": false,
-  "resolved_name": "cmd_hint_test",
+  "resolved_name": "audit_drift_check",
   "will_overwrite": false,
   "will_rename": false,
   "will_reject": false,
@@ -20,8 +20,8 @@
   "missing_config_keys": [],
   "duplicate_sources": {
     "both": [
-      "transactions_good.csv @ 2026-06-22T14:32:12 <-> transactions_good.csv @ 2026-06-22T14:32:12",
-      "invoices_good.csv @ 2026-06-22T14:32:12 <-> invoices_good.csv @ 2026-06-22T14:32:12"
+      "invoices_good.csv @ 2026-06-22T15:25:35 <-> invoices_good.csv @ 2026-06-22T15:25:35",
+      "transactions_good.csv @ 2026-06-22T15:25:35 <-> transactions_good.csv @ 2026-06-22T15:25:35"
     ],
     "target_only": [],
     "audit_only": []
@@ -32,12 +32,12 @@
   "errors": [],
   "importable": true,
   "summary": {
-    "original_session_name": "audit_source",
-    "original_session_id": "aa9b8de296a4",
+    "original_session_name": "may_2026_source",
+    "original_session_id": "ef905ef93134",
     "invoices_count": 8,
     "transactions_count": 10,
-    "matches_count": 8,
-    "history_count": 8,
+    "matches_count": 3,
+    "history_count": 4,
     "imported_files_count": 2
   },
   "import_executed": false,

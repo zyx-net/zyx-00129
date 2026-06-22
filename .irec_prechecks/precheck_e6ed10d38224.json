@@ -1,0 +1,47 @@
+{
+  "precheck_id": "precheck_e6ed10d38224",
+  "audit_file": "may_2026_final.irecaudit",
+  "audit_path": "may_2026_final.irecaudit",
+  "audit_id": "audit_092487027255",
+  "precheck_at": "2026-06-22T15:25:39",
+  "target_session_name": "audit_conflict_demo",
+  "conflict_mode": "reject",
+  "apply_config": false,
+  "session_exists": true,
+  "resolved_name": "audit_conflict_demo",
+  "will_overwrite": false,
+  "will_rename": false,
+  "will_reject": true,
+  "rename_to": "",
+  "version_ok": true,
+  "version_message": "",
+  "content_hash_valid": true,
+  "config_drift": {},
+  "missing_config_keys": [],
+  "duplicate_sources": {
+    "both": [],
+    "target_only": [],
+    "audit_only": []
+  },
+  "warnings": [],
+  "errors": [
+    "会话 'audit_conflict_demo' 已存在，冲突模式为 reject，导入将被拒绝"
+  ],
+  "importable": false,
+  "summary": {
+    "original_session_name": "may_2026_source",
+    "original_session_id": "ef905ef93134",
+    "invoices_count": 8,
+    "transactions_count": 10,
+    "matches_count": 3,
+    "history_count": 4,
+    "imported_files_count": 2
+  },
+  "import_executed": false,
+  "imported_at": "",
+  "imported_session_name": "",
+  "imported_session_id": "",
+  "actual_final_action": "",
+  "actual_conflict_mode": "",
+  "config_drift_summary": {}
+}

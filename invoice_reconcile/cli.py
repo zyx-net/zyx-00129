@@ -545,17 +545,22 @@ def _fmt_audit_import_history(h):
         click.echo(f"  ║    处理原因     : {reason}")
     click.echo(f"  ╠══════════════════════════════════════════════════════════╣")
     sess_before = conflict.get("session_existed_before", False)
+    intended = (
+        conflict.get("intended_session_name")
+        or conflict.get("original_name")
+        or d.get("target_session_name", "")
+    )
     if sess_before:
         if conflict.get("overwritten"):
-            branch = f"同名会话已存在 → 覆盖原会话（已替换）"
+            branch = f"同名会话已存在 → 覆盖目标会话 '{intended}'（已替换）"
         elif conflict.get("renamed"):
-            orig = conflict.get("original_name", d.get("target_session_name", ""))
+            orig = intended
             final = conflict.get("final_name", d.get("target_session_name", ""))
-            branch = f"同名会话已存在 → 另存新副本 '{orig}' → '{final}'"
+            branch = f"同名会话已存在 → 目标 '{orig}' 被占用，另存新副本 '{orig}' → '{final}'"
         else:
-            branch = "同名会话已存在 → (未知分支)"
+            branch = f"同名会话已存在 → (未知分支)，目标会话名 '{intended}'"
     else:
-        branch = "目标会话名未占用 → 创建新会话"
+        branch = f"目标会话名未占用 → 创建新会话 '{intended}'"
     click.echo(f"  ║  冲突分支结果   : {branch}")
     click.echo(f"  ╠══════════════════════════════════════════════════════════╣")
     drift_keys = d.get("config_drift_detected", [])
@@ -579,9 +584,15 @@ def _fmt_audit_import_history(h):
     else:
         click.echo(f"  ║  重复来源摘要   : ✓ 未发现重复来源")
     click.echo(f"  ╠══════════════════════════════════════════════════════════╣")
-    click.echo(f"  ║  目标会话       : {d.get('target_session_name', '(未知)')}  (ID: {d.get('target_session_id', '')})")
+    final_sn = d.get("final_session_name")
+    intended_sn = intended
+    if final_sn and final_sn != intended_sn:
+        target_line = f"原定 '{intended_sn}' → 最终 '{final_sn}'  (ID: {d.get('target_session_id', '')})"
+    else:
+        target_line = f"{final_sn or intended_sn or d.get('target_session_name', '(未知)')}  (ID: {d.get('target_session_id', '')})"
+    click.echo(f"  ║  目标会话       : {target_line}")
     click.echo(f"  ║  来源审计包     : {d.get('source_audit_file', '(未知)')}  (ID: {d.get('source_audit_id', '')})")
-    click.echo(f"  ║  原会话         : {d.get('original_session_name', '(未知)')}  (ID: {d.get('original_session_id', '')})")
+    click.echo(f"  ║  原会话(归档内) : {d.get('original_session_name', '(未知)')}  (ID: {d.get('original_session_id', '')})")
     apply_cfg = d.get("apply_config", False)
     if apply_cfg:
         click.echo(f"  ║  配置恢复       : ✓ 已恢复审计包中的配置到当前工作目录")
@@ -768,11 +779,12 @@ def audit_import(audit_file, as_name, overwrite, reject, auto_rename, apply_conf
     click.echo(f"  新会话ID      : {result['session_id']}")
     click.echo(f"  来源审计包ID  : {result['audit_id']}")
     click.echo(f"  预检ID        : {result.get('precheck_id', 'N/A')}")
-    click.echo(f"  原会话        : {result['original_session_name']} (ID: {result['original_session_id']})")
+    click.echo(f"  原会话(审计包): {result['original_session_name']} (ID: {result['original_session_id']})")
+    click.echo(f"  目标会话(原定): {result.get('intended_session_name', result['session_name'])}")
     if result["overwritten"]:
-        click.echo(f"  [!!]          : 已覆盖已存在的同名会话")
+        click.echo(f"  [!!]          : 目标 '{result.get('intended_session_name', result['session_name'])}' 已存在，已覆盖同名会话")
     if result["renamed"]:
-        click.echo(f"  [!!]          : 因重名已自动重命名为 '{result['session_name']}'（另存新副本）")
+        click.echo(f"  [!!]          : 目标 '{result.get('intended_session_name', result['session_name'])}' 已存在，自动另存新副本 '{result['session_name']}'")
     if apply_config:
         click.echo(f"  配置          : ✓ 已恢复审计包中的配置")
     if result.get("config_drift"):
@@ -891,25 +903,46 @@ def audit_info(audit_file):
         click.echo(f"  导入复查（{len(imports)} 次导入记录）:")
         for idx, imp in enumerate(imports, 1):
             click.echo(f"  ▶ 第 {idx} 次导入 @ {imp['import_timestamp']}")
-            click.echo(f"    目标会话        : {imp['session_name']}  (ID: {imp['session_id']})")
+            intended = imp.get("intended_session_name") or imp.get("target_session_name")
+            final_sn = imp.get("final_session_name") or imp["session_name"]
+            if final_sn and final_sn != intended:
+                target_line = f"原定 '{intended}' → 最终 '{final_sn}'  (ID: {imp['session_id']})"
+            else:
+                target_line = f"{final_sn}  (ID: {imp['session_id']})"
+            click.echo(f"    目标会话        : {target_line}")
             click.echo(f"    预检结论        : {imp['precheck_conclusion']}  (预检ID: {imp['precheck_id'] or '(无)'})")
             click.echo(f"    最终处理方式    : {imp['final_action_label']}")
             if imp.get("final_action_reason"):
                 click.echo(f"      处理原因      : {imp['final_action_reason']}")
             if imp.get("session_existed_before"):
                 conflict_tag = ""
+                intended = (
+                    imp.get("intended_session_name")
+                    or imp.get("conflict_original_name")
+                    or imp.get("target_session_name", "")
+                )
                 if imp.get("overwritten"):
-                    conflict_tag = "覆盖原会话"
+                    conflict_tag = f"覆盖目标会话 '{intended}'（已替换）"
                 elif imp.get("renamed"):
-                    conflict_tag = "另存新副本"
+                    orig = intended
+                    final = (
+                        imp.get("conflict_final_name")
+                        or imp.get("conflict_branch_result", {}).get("final_name")
+                        or imp["session_name"]
+                    )
+                    conflict_tag = f"目标 '{orig}' 被占用，另存新副本 '{orig}' → '{final}'"
+                    click.echo(f"      重命名前名称  : {orig}")
+                    click.echo(f"      重命名后名称  : {final}")
                 else:
-                    conflict_tag = "(未知)"
+                    conflict_tag = f"(未知分支)，目标会话名 '{intended}'"
                 click.echo(f"    冲突分支结果    : 目标会话已存在 → {conflict_tag}")
-                if imp.get("renamed"):
-                    click.echo(f"      重命名前名称  : {imp.get('conflict_branch_result', {}).get('original_name', imp['target_session_name'])}")
-                    click.echo(f"      重命名后名称  : {imp.get('conflict_branch_result', {}).get('final_name', imp['session_name'])}")
             else:
-                click.echo(f"    冲突分支结果    : 目标会话未占用，创建新会话")
+                intended = (
+                    imp.get("intended_session_name")
+                    or imp.get("conflict_original_name")
+                    or imp.get("target_session_name", "")
+                )
+                click.echo(f"    冲突分支结果    : 目标会话未占用，创建新会话 '{intended}'")
             drift_sum = imp.get("config_drift_summary", {})
             drift_full = imp.get("config_drift_full", {})
             if drift_sum or drift_full:
@@ -1285,11 +1318,11 @@ def _print_precheck_result(result):
             click.echo(f"    实际冲突模式  : {result.actual_conflict_mode}")
         if result.session_exists and result.actual_final_action != "create":
             if result.actual_final_action == "rename":
-                click.echo(f"      → 原目标会话 '{result.target_session_name}' 已存在，自动另存为 '{result.imported_session_name}'")
+                click.echo(f"      → 目标 '{result.target_session_name}' 已被占用，另存新副本 '{result.target_session_name}' → '{result.imported_session_name}'")
             elif result.actual_final_action == "overwrite":
-                click.echo(f"      → 原目标会话 '{result.target_session_name}' 已被覆盖替换")
+                click.echo(f"      → 目标会话 '{result.target_session_name}' 已存在，已被覆盖替换")
         else:
-            click.echo(f"      → 目标会话名未被占用，创建新会话")
+            click.echo(f"      → 目标会话名 '{result.target_session_name}' 未被占用，创建新会话")
         drift_sum = result.config_drift_summary
         if drift_sum:
             drift_total = drift_sum.get("total", 0)

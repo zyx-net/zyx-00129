@@ -642,7 +642,8 @@ class AuditManager:
 
         orig_name = pkg.session_data.get("name", "restored")
         orig_id = pkg.session_data.get("session_id", "")
-        desired_name = target_session_name or orig_name
+        intended_session_name = target_session_name or orig_name
+        desired_name = intended_session_name
 
         exists = sm.exists(desired_name)
         overwritten = False
@@ -717,6 +718,7 @@ class AuditManager:
                 "reject" if precheck_result.will_reject else
                 "new_session"
             ),
+            "intended_session_name": intended_session_name,
             "final_session_name": desired_name,
             "warnings_count": len(precheck_result.warnings),
             "errors_count": len(precheck_result.errors),
@@ -746,8 +748,9 @@ class AuditManager:
             source_audit_file=path.name,
             original_session_name=orig_name,
             original_session_id=orig_id,
-            target_session_name=desired_name,
+            target_session_name=intended_session_name,
             target_session_id=new_session.session_id,
+            final_session_name=desired_name,
             conflict_mode=conflict_mode,
             apply_config=apply_config,
             warnings=warnings,
@@ -762,8 +765,9 @@ class AuditManager:
                 "session_existed_before": precheck_result.session_exists,
                 "overwritten": overwritten,
                 "renamed": renamed,
-                "original_name": desired_name if (overwritten or precheck_result.session_exists) else "",
+                "original_name": intended_session_name if (overwritten or precheck_result.session_exists) else "",
                 "final_name": desired_name,
+                "intended_session_name": intended_session_name,
             },
             import_timestamp=_now_iso(),
         )
@@ -788,6 +792,7 @@ class AuditManager:
             "session_id": new_session.session_id,
             "original_session_name": orig_name,
             "original_session_id": orig_id,
+            "intended_session_name": intended_session_name,
             "audit_id": pkg.metadata.audit_id,
             "audit_file": path.name,
             "conflict_mode": conflict_mode,
@@ -801,6 +806,8 @@ class AuditManager:
             "duplicate_sources": duplicate_sources,
             "precheck_id": precheck_result.precheck_id,
             "precheck_summary": precheck_summary,
+            "conflict_original_name": intended_session_name if (overwritten or precheck_result.session_exists) else "",
+            "conflict_final_name": desired_name,
         }
 
     def replay_log(
@@ -866,6 +873,17 @@ class AuditManager:
                 d = h.details
                 pre_sum = d.get("precheck_summary", {})
                 conflict = d.get("conflict_branch_result", {})
+                intended_sn = (
+                    conflict.get("intended_session_name")
+                    or conflict.get("original_name")
+                    or d.get("target_session_name", "")
+                )
+                conflict_orig = intended_sn
+                conflict_final = (
+                    conflict.get("final_name")
+                    or d.get("final_session_name")
+                    or sess.name
+                )
                 results.append({
                     "session_name": sess.name,
                     "session_id": sess.session_id,
@@ -875,8 +893,10 @@ class AuditManager:
                     "source_audit_file": d.get("source_audit_file", ""),
                     "original_session_name": d.get("original_session_name", ""),
                     "original_session_id": d.get("original_session_id", ""),
-                    "target_session_name": d.get("target_session_name", ""),
+                    "target_session_name": intended_sn,
                     "target_session_id": d.get("target_session_id", ""),
+                    "final_session_name": conflict_final,
+                    "intended_session_name": intended_sn,
                     "conflict_mode": d.get("conflict_mode", ""),
                     "apply_config": d.get("apply_config", False),
                     "final_action": d.get("final_action", ""),
@@ -898,6 +918,9 @@ class AuditManager:
                     "session_existed_before": conflict.get("session_existed_before", False),
                     "overwritten": conflict.get("overwritten", False),
                     "renamed": conflict.get("renamed", False),
+                    "conflict_original_name": conflict_orig,
+                    "conflict_final_name": conflict_final,
+                    "conflict_branch_result": conflict,
                     "config_drift_keys": d.get("config_drift_detected", []),
                     "config_drift_count": len(d.get("config_drift_detected", [])),
                     "config_drift_full": d.get("config_drift_full", {}),

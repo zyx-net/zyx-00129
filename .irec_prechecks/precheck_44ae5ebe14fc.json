@@ -1,14 +1,14 @@
 {
-  "precheck_id": "precheck_ce0f14174e64",
-  "audit_file": "audit_A_full.irecaudit",
-  "audit_path": "D:\\workSpace\\AI__SPACE\\zyx-00129\\.irec_audits\\audit_A_full.irecaudit",
-  "audit_id": "audit_0af94c78501d",
-  "precheck_at": "2026-06-22T14:35:40",
-  "target_session_name": "rvw_rename_base",
+  "precheck_id": "precheck_44ae5ebe14fc",
+  "audit_file": "may_2026_final.irecaudit",
+  "audit_path": "may_2026_final.irecaudit",
+  "audit_id": "audit_092487027255",
+  "precheck_at": "2026-06-22T15:26:27",
+  "target_session_name": "reviewer_manual_target",
   "conflict_mode": "reject",
   "apply_config": false,
   "session_exists": true,
-  "resolved_name": "rvw_rename_base",
+  "resolved_name": "reviewer_manual_target",
   "will_overwrite": false,
   "will_rename": false,
   "will_reject": true,
@@ -21,20 +21,23 @@
   "duplicate_sources": {
     "both": [],
     "target_only": [],
-    "audit_only": []
+    "audit_only": [
+      "transactions_good.csv @ 2026-06-22T15:25:35",
+      "invoices_good.csv @ 2026-06-22T15:25:35"
+    ]
   },
   "warnings": [],
   "errors": [
-    "会话 'rvw_rename_base' 已存在，冲突模式为 reject，导入将被拒绝"
+    "会话 'reviewer_manual_target' 已存在，冲突模式为 reject，导入将被拒绝"
   ],
   "importable": false,
   "summary": {
-    "original_session_name": "audit_source",
-    "original_session_id": "aa9b8de296a4",
+    "original_session_name": "may_2026_source",
+    "original_session_id": "ef905ef93134",
     "invoices_count": 8,
     "transactions_count": 10,
-    "matches_count": 8,
-    "history_count": 8,
+    "matches_count": 3,
+    "history_count": 4,
     "imported_files_count": 2
   },
   "import_executed": false,

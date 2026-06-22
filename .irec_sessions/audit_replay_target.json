@@ -1,16 +1,16 @@
 {
-  "session_id": "05f3977ac544",
+  "session_id": "79d29da3e6c3",
   "name": "audit_replay_target",
-  "created_at": "2026-06-22T14:32:17",
-  "updated_at": "2026-06-22T14:32:17",
+  "created_at": "2026-06-22T15:25:39",
+  "updated_at": "2026-06-22T15:25:40",
   "invoices": {},
   "transactions": {},
   "matches": {},
   "history": [
     {
-      "id": "60b52f91c66a",
+      "id": "394f7642f007",
       "action": "import_invoices",
-      "timestamp": "2026-06-22T14:32:17",
+      "timestamp": "2026-06-22T15:25:40",
       "details": {
         "file": "invoices_good.csv",
         "count": 8,
@@ -18,9 +18,9 @@
       }
     },
     {
-      "id": "ba24606a25b2",
+      "id": "ab86392f28ed",
       "action": "import_transactions",
-      "timestamp": "2026-06-22T14:32:17",
+      "timestamp": "2026-06-22T15:25:40",
       "details": {
         "file": "transactions_good.csv",
         "count": 10,
@@ -28,27 +28,20 @@
       }
     },
     {
-      "id": "7c3e5f50abd3",
+      "id": "ac327aaea248",
       "action": "auto_match",
-      "timestamp": "2026-06-22T14:32:17",
+      "timestamp": "2026-06-22T15:25:40",
       "details": {
-        "matched_count": 6,
+        "matched_count": 3,
         "invoice_ids_used": [
-          "0d4d22914ec4",
-          "1fda6ff275bd",
-          "2fef143fb93d",
-          "53180ba7bb07",
-          "53f3f01f800e",
-          "d4dad4a03c82"
+          "76a844a80fe3",
+          "8af764caa4d3",
+          "caca9af7e76b"
         ],
         "transaction_ids_used": [
-          "37889f3f61a5",
-          "4d357da55045",
-          "81be7a796cef",
-          "a627484f62aa",
-          "b409db5f2d3a",
-          "c74fe5a049d0",
-          "f25119b8d070"
+          "1fadab56af4a",
+          "726f4f401d2f",
+          "b93d754cde19"
         ],
         "config": {
           "amount_tolerance": 0.01,
@@ -57,116 +50,42 @@
       }
     },
     {
-      "id": "958a9e9c1e4a",
-      "action": "manual_match",
-      "timestamp": "2026-06-22T14:32:17",
-      "details": {
-        "match_id": "f6d3e4c161da",
-        "invoice_ids": [
-          "b96f8f7ecb64"
-        ],
-        "transaction_ids": [
-          "f14ef43c5e20"
-        ],
-        "invoice_nos": [
-          "INV-2026-008"
-        ],
-        "txn_ids": [
-          "TXN20260620009"
-        ],
-        "invoice_amount_sum": 9200.0,
-        "transaction_amount_sum": 9500.0,
-        "diff_amount": 300.0,
-        "notes": "差额300元为手续费，财务确认入账【审计测试】"
-      }
-    },
-    {
-      "id": "034cabf325d9",
-      "action": "suspend_invoice",
-      "timestamp": "2026-06-22T14:32:17",
-      "details": {
-        "invoice_id": "3bb0991e476c",
-        "invoice_no": "INV-2026-005",
-        "reason": "合同金额争议，等待商务确认【审计】"
-      }
-    },
-    {
-      "id": "f0aa3f396f32",
-      "action": "reverse_match",
-      "timestamp": "2026-06-22T14:32:17",
-      "details": {
-        "match_id": "f6d3e4c161da",
-        "match_type": "manual",
-        "invoice_ids": [
-          "b96f8f7ecb64"
-        ],
-        "transaction_ids": [
-          "f14ef43c5e20"
-        ],
-        "reason": "演示撤销【审计测试】"
-      }
-    },
-    {
-      "id": "9b791c06c382",
-      "action": "manual_match",
-      "timestamp": "2026-06-22T14:32:17",
-      "details": {
-        "match_id": "1b691770288c",
-        "invoice_ids": [
-          "b96f8f7ecb64"
-        ],
-        "transaction_ids": [
-          "f14ef43c5e20"
-        ],
-        "invoice_nos": [
-          "INV-2026-008"
-        ],
-        "txn_ids": [
-          "TXN20260620009"
-        ],
-        "invoice_amount_sum": 9200.0,
-        "transaction_amount_sum": 9500.0,
-        "diff_amount": 300.0,
-        "notes": "重新匹配：差额300手续费【审计】"
-      }
-    },
-    {
-      "id": "62a2585c1b2e",
+      "id": "56c4791a2e05",
       "action": "audit_export",
-      "timestamp": "2026-06-22T14:32:17",
+      "timestamp": "2026-06-22T15:25:40",
       "details": {
-        "audit_id": "audit_0af94c78501d",
-        "audit_file": "audit_A_full.irecaudit",
+        "audit_id": "audit_092487027255",
+        "audit_file": "may_2026_final.irecaudit",
         "audit_version": "1.0",
-        "notes": "A类回归测试-完整审计包",
-        "operator": "tester_01",
+        "notes": "2026年5月结账审计归档",
+        "operator": "财务-李明",
         "summary_snapshot": {
-          "session_id": "aa9b8de296a4",
-          "name": "audit_source",
-          "created_at": "2026-06-22T14:32:11",
-          "updated_at": "2026-06-22T14:32:13",
+          "session_id": "ef905ef93134",
+          "name": "may_2026_source",
+          "created_at": "2026-06-22T15:25:34",
+          "updated_at": "2026-06-22T15:25:35",
           "invoices": {
             "total": 8,
-            "matched": 7,
-            "unmatched": 0,
-            "suspended": 1,
+            "matched": 3,
+            "unmatched": 5,
+            "suspended": 0,
             "amount_total": 100151.25,
-            "amount_matched": 81251.25
+            "amount_matched": 54450.5
           },
           "transactions": {
             "total": 10,
-            "matched": 8,
-            "unmatched": 2,
+            "matched": 3,
+            "unmatched": 7,
             "suspended": 0,
             "amount_total": 110951.25,
-            "amount_matched": 81551.25
+            "amount_matched": 54450.5
           },
           "matches": {
-            "active": 7,
-            "reversed": 1,
-            "total": 8
+            "active": 3,
+            "reversed": 0,
+            "total": 3
           },
-          "history_count": 7,
+          "history_count": 3,
           "imported_files": 2
         }
       }
