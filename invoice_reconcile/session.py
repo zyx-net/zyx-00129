@@ -177,6 +177,23 @@ class SessionManager:
             raise FileNotFoundError(f"会话 '{name}' 不存在")
         path.unlink()
 
+    def exists(self, name: str) -> bool:
+        return self._session_path(name).exists()
+
+    def rename(self, old_name: str, new_name: str) -> Session:
+        if not self.exists(old_name):
+            raise FileNotFoundError(f"会话 '{old_name}' 不存在")
+        if self.exists(new_name):
+            raise FileExistsError(f"会话 '{new_name}' 已存在")
+        old_path = self._session_path(old_name)
+        new_path = self._session_path(new_name)
+        session = self.load(old_name)
+        session.name = new_name
+        session.updated_at = _now_iso()
+        self._save(session)
+        old_path.unlink()
+        return session
+
     @staticmethod
     def file_hash(filepath: str) -> str:
         h = hashlib.sha256()

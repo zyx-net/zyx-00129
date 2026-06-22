@@ -9,6 +9,7 @@ invoice_reconcile/manual.py
 invoice_reconcile/matcher.py
 invoice_reconcile/reporter.py
 invoice_reconcile/session.py
+invoice_reconcile/snapshot.py
 invoice_reconcile.egg-info/PKG-INFO
 invoice_reconcile.egg-info/SOURCES.txt
 invoice_reconcile.egg-info/dependency_links.txt

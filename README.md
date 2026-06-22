@@ -3,7 +3,6 @@
 多命令结构的发票与银行流水核对工具。支持本地会话持久化、配置文件、自动/人工匹配、挂起/撤销、操作历史记录与核对报告导出。
 
 ---
-
 ## 特性
 
 - **多命令 CLI**：基于 Click，结构化子命令（init / config / session / imp / match / manual / list / report 等）
@@ -22,6 +21,13 @@
 - **人工复核**：人工匹配、挂起、取消挂起、撤销
 - **完整历史**：所有操作写入不可变历史链
 - **报告导出**：JSON 总览 + CSV 多表（汇总、匹配明细、未匹配、撤销记录）
+- **会话快照**：
+  - 一键导出当前会话（发票、流水、匹配、挂起、撤销、历史、配置）为 ZIP 快照包
+  - SHA-256 内容完整性校验，版本号兼容性检查
+  - 导入为新会话：覆盖/拒绝/自动重命名 三种冲突处理
+  - 可选恢复快照中的配置到当前工作目录
+  - 导入/导出均写入操作历史，重启后数据完全一致
+  - 重复导入来源检测（快照来源 vs 当前会话已导入CSV对比）
 
 ---
 
@@ -122,6 +128,16 @@ irec show history --action reverse_match
 
 irec report -o irec_report         # 导出 JSON+CSV 报告
 irec report -f json -o rpt.json
+
+irec snapshot list                   # 列出所有快照（存储在 .irec_snapshots/）
+irec snapshot info <快照文件>        # 查看快照详情：版本、完整性、配置、数据量
+irec snapshot export -o may_2026_backup -n "月末备份"  # 导出当前会话为快照包
+irec snapshot import may_2026_backup.irecsnap --as may_2026_restored --switch  # 导入为新会话并切换
+irec snapshot import may_2026_backup.irecsnap --overwrite          # 同名会话已存在时覆盖
+irec snapshot import may_2026_backup.irecsnap --auto-rename        # 同名时自动加 _restored 后缀
+irec snapshot import may_2026_backup.irecsnap --apply-config       # 同时恢复快照中的配置
+irec snapshot delete <快照文件> --yes                              # 删除快照
+irec snapshot check-conflicts <快照文件> -s <现有会话>              # 对比重复导入来源
 ```
 
 ---
@@ -308,6 +324,86 @@ irec show matches
 irec show history -n 30
 ```
 
+### 步骤 7.5：会话快照 - 导出备份与导入恢复
+
+```bash
+# 记录当前状态快照前的关键数字（用于导入后比对）
+irec status
+irec show unmatched
+irec show history --action reverse_match
+
+# 导出当前会话为快照包（含发票、流水、匹配、挂起、撤销、历史、配置）
+irec snapshot export -o "step7_backup.irecsnap" -n "README演示：步骤7完成后备份"
+# => 输出：快照ID、版本号、SHA-256校验结果、数据量统计
+#    快照文件生成在 .irec_snapshots/step7_backup.irecsnap
+
+# 查看所有快照 & 详情（版本、完整性、配置、数据量）
+irec snapshot list
+irec snapshot info step7_backup.irecsnap
+# => 关键标记：版本兼容性 ✓  完整性哈希 ✓  配置完整性 ✓
+
+# 导入为新会话（不覆盖原 default），不恢复配置
+irec snapshot import step7_backup.irecsnap --as "default_restored" --switch
+# => 新会话ID + 来源快照ID；新会话数据量与原会话完全一致
+
+# 切换回原会话，再演示冲突处理分支
+irec session switch default
+
+# 分支 A：同名会话已存在，默认 ask 模式会交互确认
+# irec snapshot import step7_backup.irecsnap --as default
+# => 提示冲突，要求确认是否覆盖（Y=覆盖，N=终止，改用 --as 或 --auto-rename）
+
+# 分支 B：--reject 拒绝重名（安全默认）
+irec snapshot import step7_backup.irecsnap --as default_restored --reject
+# => Error: 会话 'default_restored' 已存在 (冲突模式: reject)
+
+# 分支 C：--auto-rename 自动加后缀
+irec snapshot import step7_backup.irecsnap --as default_restored --auto-rename
+# => 自动重命名为 default_restored_restored（或 default_restored_restored2 等）
+
+# 分支 D：--overwrite 强制覆盖 + --apply-config 恢复快照配置
+irec snapshot import step7_backup.irecsnap --as default_restored --overwrite --apply-config
+# => 显示 "已覆盖已存在的同名会话" + "配置已恢复"
+
+# 检查重复导入来源（两个会话是否各自独立导入过相同CSV）
+irec snapshot check-conflicts step7_backup.irecsnap -s default
+# => 若两边都导入过 invoices_good.csv / transactions_good.csv，会提示发现 N 个重复来源
+
+# 导入后验证：状态、未匹配、备注、挂起、撤销、报表汇总全部对得上
+irec session switch default_restored
+irec status                     # 会话ID变化，但核心数字=导出前
+irec show unmatched             # 未匹配列表内容、顺序完全一致
+irec show matches --all         # 活动匹配 + 已撤销匹配数量和明细完全一致
+# 人工备注仍在：差额300元为手续费
+# 挂起原因仍在：合同金额争议
+# 撤销记录仍在：演示撤销
+irec show history --action snapshot_import   # 新会话历史包含 snapshot_import
+irec show history --action snapshot_export   # （若从导入的会话看，也有原会话的 snapshot_export）
+
+# 重启后数据不变
+irec session list
+irec status -s default_restored
+# => session_id、所有合计数字、未匹配列表内容均与导入完成后一致
+```
+
+### 步骤 8：一键自动化回归
+
+```bash
+# 原边界场景回归（自动匹配链路A/B + 重启持久化）
+python _test_boundary_regression.py
+# => [ALL PASSED] 边界场景回归通过，exit 0
+
+# 快照功能回归（A往返 / B重启 / C冲突 / D覆盖·配置·版本 全部分支）
+python _test_snapshot_regression.py
+# => [ALL PASSED] 快照功能回归测试全部通过，exit 0
+# 覆盖子断言：
+#   导出→导入 发票/流水/匹配/撤销/挂起/备注/历史 全部一致
+#   重启：session_id/核心数字/未匹配列表/备注/挂起/撤销 全部不变
+#   冲突：--reject 拒绝、--auto-rename 重命名、check-conflicts 来源检测
+#   覆盖：--overwrite 覆盖 + --apply-config 配置恢复
+#   配置缺失提示 + 版本不兼容拒绝 + 删除 + 参数互斥校验  全部分支正确
+```
+
 ---
 
 ## 验收要点清单
@@ -326,6 +422,19 @@ irec show history -n 30
 | 历史记录完整 | `irec show history` | 导入、匹配、挂起、撤销均有记录 |
 | 会话重启持久化 | `irec status` 重启后对照 | session_id、合计、未处理、撤销记录、链路A/B 匹配结果、未匹配列表均不变 |
 | 报告导出 | `irec report` | JSON + 5 张 CSV 生成，含链路A拼多多匹配明细、链路B拼多多未匹配条目 |
+| **快照导出** | `irec snapshot export -o backup` | `.irec_snapshots/backup.irecsnap` 生成，含 metadata/session/config + SHA-256 完整性 hash |
+| **快照导入-无冲突** | `irec snapshot import backup --as restored --switch` | 新会话创建成功，发票/流水/匹配/挂起/撤销/人工备注/历史数据量与内容完全一致；切换成功 |
+| **快照导入-冲突--reject** | 同名会话存在时加 `--reject` | 报错被明确拒绝，原会话数据未被改动 |
+| **快照导入-冲突--auto-rename** | 同名会话存在时加 `--auto-rename` | 自动加 `_restored` 后缀导入，原会话不变 |
+| **快照导入-冲突--overwrite** | 同名会话存在时加 `--overwrite` | 原会话被覆盖，新数据正确加载；新历史含 snapshot_import |
+| **快照导入-配置缺失** | 导入删除 config 字段的快照 | 输出提示列出缺失配置项名称，使用默认值填充，导入仍成功 |
+| **快照导入-版本不兼容** | 导入主版本号 v99.0 的快照 | 明确报错：主版本不兼容 + 拒绝导入 |
+| **快照导入-hash 校验** | 篡改快照内容后导入 | 弹出确认警告，用户取消则终止导入 |
+| **快照 check-conflicts** | `irec snapshot check-conflicts backup -s 某会话` | 对比并列出双方都导入过的重复CSV来源哈希 |
+| **导入/恢复写入历史** | `irec show history --action snapshot_import` & `snapshot_export` | 导出会话在原会话历史中记录 snapshot_export；导入会话在新会话历史中记录 snapshot_import（含来源快照ID、冲突模式、是否恢复配置等详情） |
+| **跨重启一致性** | 导入后 `irec status` → 重启CLI → 再 `irec status` | 新会话 ID、发票/流水/匹配/撤销/挂起总数、未匹配列表内容与顺序、人工备注、挂起原因、撤销原因、报表汇总 全部与导入完成时一致 |
+| **snapshot list / info / delete** | 三个命令分别执行 | list 列出所有快照含原会话与数据量；info 展示版本兼容✓/完整性✓/配置✓ 三级标记；delete --yes 物理删除文件 |
+| **一键回归脚本** | `python _test_snapshot_regression.py` | 输出 `[ALL PASSED]` + exit 0，覆盖 A往返/B重启/C冲突/D覆盖 四大类 |
 
 ---
 

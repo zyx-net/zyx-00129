@@ -1,8 +1,8 @@
 ﻿ID,流水号,对方单位,金额,交易日期,挂起,挂起原因,来源文件,来源行号
-47ff80f6f8f5,TXN20260612005,百度,9400.0,2026-06-13,否,,transactions_good.csv,6
-486e688f99f6,TXN20260620009,小米,9500.0,2026-06-21,否,,transactions_good.csv,10
-bd3ebd443602,TXN20260622010,网易,20000.0,2026-06-22,否,,transactions_good.csv,11
-118225e9a7ea,TXN20260601011,拼多多,1000.0,2026-05-01,否,,transactions_regression.csv,2
-181d3db0b952,TXN20260601012,拼多多,5000.0,2026-05-01,否,,transactions_regression.csv,3
-8cbbb507d328,TXN20260601015,拼多多,1500.0,2026-05-01,否,,transactions_regression.csv,6
-672ccf9b1972,TXN20260601016,拼多多,2500.0,2026-05-01,否,,transactions_regression.csv,7
+b9b52e822a90,TXN20260612005,百度,9400.0,2026-06-13,否,,transactions_good.csv,6
+d9b02aa02305,TXN20260620009,小米,9500.0,2026-06-21,否,,transactions_good.csv,10
+06cdbad062d2,TXN20260622010,网易,20000.0,2026-06-22,否,,transactions_good.csv,11
+b101350996b7,TXN20260601011,拼多多,1000.0,2026-05-01,否,,transactions_regression.csv,2
+1104004ba67e,TXN20260601012,拼多多,5000.0,2026-05-01,否,,transactions_regression.csv,3
+3624ca962a69,TXN20260601015,拼多多,1500.0,2026-05-01,否,,transactions_regression.csv,6
+851bc3aa27bf,TXN20260601016,拼多多,2500.0,2026-05-01,否,,transactions_regression.csv,7
