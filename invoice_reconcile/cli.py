@@ -24,6 +24,7 @@ from .manual import (
 )
 from .reporter import build_report, export_json, export_csv
 from .snapshot import SnapshotManager, SNAPSHOT_VERSION
+from .audit import AuditManager, AUDIT_VERSION
 
 
 STATE_FILE = ".irec_state.json"
@@ -531,6 +532,344 @@ def report(fmt, output_path, session_name):
         click.echo(f"  {tag:<18} -> {os.path.abspath(p)}")
     click.echo()
     click.echo(_fmt_status_header(rpt["summary"]))
+
+
+# ============================================================
+# audit 命令组
+# ============================================================
+@main.group(help="审计包管理：一键归档/恢复/复盘结账状态，含摘要、配置、明细、指纹、日志")
+def audit():
+    pass
+
+
+@audit.command("export", help="导出当前会话为审计归档包（含报告、指纹、日志全套）")
+@click.option("--output", "-o", "filename", help="输出文件名（默认自动生成）")
+@click.option("--notes", "-n", default="", help="审计包备注")
+@click.option("--operator", default="", help="操作人")
+@click.option("--session", "-s", "session_name", help="指定会话，默认当前会话")
+def audit_export(filename, notes, operator, session_name):
+    cfg, sm, sess = _load_session(session_name)
+    audit_mgr = AuditManager()
+    try:
+        path, pkg = audit_mgr.export(sess, cfg, filename=filename, notes=notes, operator=operator)
+        sm.save(sess)
+        info = audit_mgr.info(os.path.basename(path)) or {}
+        click.echo(f"[OK] 审计包已导出 -> {os.path.abspath(path)}")
+        click.echo(f"  审计包ID      : {pkg.metadata.audit_id}")
+        click.echo(f"  审计包版本    : v{pkg.metadata.audit_version} (格式 v{AUDIT_VERSION})")
+        click.echo(f"  导出时间      : {pkg.metadata.created_at}")
+        click.echo(f"  原会话        : {pkg.metadata.original_session_name} (ID: {pkg.metadata.original_session_id})")
+        click.echo(f"  内容完整性    : {'✓ SHA-256 校验通过' if info.get('content_hash_valid') else '✗ 校验失败'}")
+        click.echo(f"  发票/流水/匹配/历史: {info.get('invoices_count', 0)}/{info.get('transactions_count', 0)}/"
+                   f"{info.get('matches_count', 0)}/{info.get('history_count', 0)}")
+        click.echo(f"  来源文件数    : {info.get('source_files_count', 0)}")
+        if operator:
+            click.echo(f"  操作人        : {operator}")
+        if notes:
+            click.echo(f"  备注          : {notes}")
+        click.echo()
+        click.echo(f"  归档清单:")
+        for fname, desc in pkg.manifest.get("files", {}).items():
+            click.echo(f"    - {fname:<40}  {desc}")
+    except Exception as e:
+        raise click.ClickException(f"导出失败: {e}")
+
+
+@audit.command("import", help="从审计归档包恢复为新会话")
+@click.argument("audit_file")
+@click.option("--as", "as_name", default=None, help="导入为新会话名称")
+@click.option("--overwrite", is_flag=True, help="同名会话存在时覆盖（危险）")
+@click.option("--reject", is_flag=True, help="同名会话存在时拒绝（默认行为）")
+@click.option("--auto-rename", is_flag=True, help="同名会话存在时自动重命名（另存新副本）")
+@click.option("--apply-config", is_flag=True, help="同时恢复审计包中的配置到当前工作目录")
+@click.option("--switch", "do_switch", is_flag=True, help="导入后切换到新会话")
+def audit_import(audit_file, as_name, overwrite, reject, auto_rename, apply_config, do_switch):
+    cfg, sm = _load_cfg_and_sm()
+    audit_mgr = AuditManager()
+
+    try:
+        analysis = audit_mgr.analyze(audit_file, current_config=cfg)
+    except FileNotFoundError:
+        raise click.ClickException(f"审计包不存在: {audit_file}")
+    except ValueError as e:
+        raise click.ClickException(f"审计包分析失败: {e}")
+
+    conflict_count = sum([overwrite, reject, auto_rename])
+    if conflict_count > 1:
+        raise click.ClickException("--overwrite / --reject / --auto-rename 三选一，不能同时指定")
+    if overwrite:
+        conflict_mode = "overwrite"
+    elif reject:
+        conflict_mode = "reject"
+    elif auto_rename:
+        conflict_mode = "rename"
+    else:
+        conflict_mode = "ask"
+
+    desired = as_name or analysis.get("original_session_name", "restored")
+    if sm.exists(desired) and conflict_mode == "ask":
+        if not click.confirm(
+            f"\n会话 '{desired}' 已存在！\n"
+            f"  - 输入 Y = 覆盖此会话（所有现有数据丢失）\n"
+            f"  - 输入 N = 终止导入，请改用 --as <新名称> 或 --auto-rename"
+        ):
+            click.echo("[已取消] 导入终止。可用 --as <新名称> 重命名导入，或 --auto-rename 自动加后缀")
+            return
+        conflict_mode = "overwrite"
+
+    if analysis.get("missing_config_keys") and not apply_config:
+        click.echo(f"[提示] 审计包中缺少配置项: {', '.join(analysis['missing_config_keys'])}")
+        click.echo(f"       导入时将使用当前配置（加 --apply-config 可恢复审计包里的配置）")
+
+    if analysis.get("config_drift") and not apply_config:
+        drift = analysis["config_drift"]
+        click.echo(f"[提示] 配置漂移检测: 共 {len(drift)} 项与当前工作目录配置不同:")
+        for k, v in drift.items():
+            click.echo(f"       - {k}: 审计包={v['audit']}, 当前={v['current']}")
+        click.echo(f"       加 --apply-config 可覆盖为审计包中的配置")
+
+    if not analysis.get("version_ok", True):
+        raise click.ClickException(f"版本不兼容: {analysis.get('version_message', '')}")
+
+    if not analysis.get("content_hash_valid", False):
+        if not click.confirm(
+            f"\n[警告] 审计包内容哈希校验失败！文件可能被篡改或损坏。\n"
+            f"       是否仍然尝试导入？（可能出现数据不一致）"
+        ):
+            click.echo("[已取消] 因完整性校验失败而终止")
+            return
+
+    try:
+        result = audit_mgr.import_audit(
+            audit_file, sm,
+            target_session_name=as_name,
+            conflict_mode=conflict_mode,
+            apply_config=apply_config,
+            current_config=cfg,
+        )
+    except FileExistsError as e:
+        raise click.ClickException(str(e))
+    except Exception as e:
+        raise click.ClickException(f"导入失败: {e}")
+
+    new_sess = sm.load(result["session_name"])
+    summary = sm.status_summary(new_sess)
+
+    click.echo(f"[OK] 审计包已导入为会话 '{result['session_name']}'")
+    click.echo(f"  新会话ID      : {result['session_id']}")
+    click.echo(f"  来源审计包ID  : {result['audit_id']}")
+    click.echo(f"  原会话        : {result['original_session_name']} (ID: {result['original_session_id']})")
+    if result["overwritten"]:
+        click.echo(f"  [!!]          : 已覆盖已存在的同名会话")
+    if result["renamed"]:
+        click.echo(f"  [!!]          : 因重名已自动重命名为 '{result['session_name']}'（另存新副本）")
+    if apply_config:
+        click.echo(f"  配置          : ✓ 已恢复审计包中的配置")
+    if result.get("config_drift"):
+        drift_keys = list(result["config_drift"].keys())
+        click.echo(f"  配置漂移项    : {', '.join(drift_keys)}")
+    if result.get("duplicate_sources"):
+        click.echo(f"  重复来源文件  : {len(result['duplicate_sources'])} 个")
+    if result["warnings"]:
+        for w in result["warnings"]:
+            click.echo(f"  {w}")
+    if result["missing_config_keys"]:
+        click.echo(f"  缺失配置项    : {', '.join(result['missing_config_keys'])} (使用默认值)")
+
+    if do_switch:
+        _save_current_session(result["session_name"])
+        click.echo(f"  [OK]          : 已切换到新会话")
+
+    click.echo()
+    click.echo(_fmt_status_header(summary))
+
+
+@audit.command("list", help="列出所有审计包")
+def audit_list():
+    audit_mgr = AuditManager()
+    audits = audit_mgr.list_audits()
+    if not audits:
+        click.echo("(暂无审计包，使用 `irec audit export` 创建)")
+        return
+    click.echo(f"审计包存储目录: {audit_mgr.audit_dir}")
+    click.echo()
+    click.echo(f"{'文件':<42} {'审计ID':<16} {'创建时间':<22} {'原会话':<14} 发票 流水 匹配 历史 来源 完整性")
+    click.echo("-" * 170)
+    for a in audits:
+        if a.get("audit_id") == "corrupt":
+            click.echo(f"{a['file']:<42} {'[损坏]':<16} {'-':<22} {'-':<14} - - - - - -")
+            continue
+        hash_tag = "✓" if a.get("content_hash_valid") else "✗"
+        click.echo(
+            f"{a['file']:<42} {a['audit_id']:<16} {a['created_at']:<22} "
+            f"{a['original_session_name'][:14]:<14} "
+            f"{a.get('invoices_count', 0):>4} "
+            f"{a.get('transactions_count', 0):>4} "
+            f"{a.get('matches_count', 0):>4} "
+            f"{a.get('history_count', 0):>4} "
+            f"{a.get('source_files_count', 0):>4} "
+            f"  {hash_tag}"
+        )
+
+
+@audit.command("info", help="查看单个审计包的详细信息")
+@click.argument("audit_file")
+def audit_info(audit_file):
+    audit_mgr = AuditManager()
+    try:
+        cfg, _ = _load_cfg_and_sm()
+        info = audit_mgr.info(audit_file)
+        analysis = audit_mgr.analyze(audit_file, current_config=cfg)
+    except FileNotFoundError:
+        raise click.ClickException(f"审计包不存在: {audit_file}")
+    except ValueError as e:
+        raise click.ClickException(f"审计包读取失败: {e}")
+
+    if not info:
+        raise click.ClickException(f"无法读取审计包: {audit_file}")
+
+    click.echo(f"═══════════════════════════════════════════════════════════════")
+    click.echo(f"  审计包文件    : {info['file']}")
+    click.echo(f"  完整路径      : {info['path']}")
+    click.echo(f"───────────────────────────────────────────────────────────────")
+    click.echo(f"  审计包ID      : {info['audit_id']}")
+    click.echo(f"  审计包格式版本: v{info['audit_version']}  (当前支持 v{AUDIT_VERSION})")
+    click.echo(f"  应用版本      : {info['app_version']}")
+    click.echo(f"  创建时间      : {info['created_at']}")
+    click.echo(f"───────────────────────────────────────────────────────────────")
+    click.echo(f"  原会话名称    : {info['original_session_name']}")
+    click.echo(f"  原会话ID      : {info['original_session_id']}")
+    click.echo(f"  操作人        : {info.get('operator') or '(无)'}")
+    click.echo(f"  备注          : {info.get('notes') or '(无)'}")
+    click.echo(f"───────────────────────────────────────────────────────────────")
+    version_tag = "✓ 兼容" if analysis.get("version_ok") else f"✗ {analysis.get('version_message', '不兼容')}"
+    click.echo(f"  版本兼容性    : {version_tag}")
+    hash_tag = "✓ 通过" if info.get("content_hash_valid") else "✗ 失败（文件可能被篡改）"
+    click.echo(f"  完整性哈希    : {hash_tag}")
+    cfg_tag = "✓ 完整" if analysis.get("config_complete") else f"⚠ 缺失: {', '.join(analysis.get('missing_config_keys', []))}"
+    click.echo(f"  配置完整性    : {cfg_tag}")
+    drift = analysis.get("config_drift", {})
+    if drift:
+        click.echo(f"  配置漂移      : {len(drift)} 项与当前配置不同:")
+        for k, v in drift.items():
+            click.echo(f"    - {k}: 审计包={v['audit']}, 当前={v['current']}")
+    else:
+        click.echo(f"  配置漂移      : ✓ 与当前配置一致")
+    dup = analysis.get("imported_file_hashes", [])
+    click.echo(f"  来源文件数    : {info.get('source_files_count', 0)}")
+    click.echo(f"───────────────────────────────────────────────────────────────")
+    s = info.get("summary", {})
+    if s:
+        click.echo(f"  发票统计      : 总{s.get('invoices', {}).get('total', 0)}  "
+                   f"已匹配{s.get('invoices', {}).get('matched', 0)}  "
+                   f"未匹配{s.get('invoices', {}).get('unmatched', 0)}  "
+                   f"挂起{s.get('invoices', {}).get('suspended', 0)}")
+        click.echo(f"  流水统计      : 总{s.get('transactions', {}).get('total', 0)}  "
+                   f"已匹配{s.get('transactions', {}).get('matched', 0)}  "
+                   f"未匹配{s.get('transactions', {}).get('unmatched', 0)}  "
+                   f"挂起{s.get('transactions', {}).get('suspended', 0)}")
+        click.echo(f"  匹配统计      : 活动{s.get('matches', {}).get('active', 0)}  "
+                   f"已撤销{s.get('matches', {}).get('reversed', 0)}  "
+                   f"历史操作{s.get('history_count', 0)}  "
+                   f"已导入文件{s.get('imported_files', 0)}")
+    click.echo(f"───────────────────────────────────────────────────────────────")
+    if analysis.get("warnings"):
+        click.echo(f"  警告:")
+        for w in analysis["warnings"]:
+            click.echo(f"    ⚠ {w}")
+    if analysis.get("source_fingerprints"):
+        fps = analysis["source_fingerprints"]
+        click.echo(f"  来源文件指纹 ({len(fps)} 个):")
+        for fh, fp in list(fps.items())[:5]:
+            label = fp.get("file_label", fp.get("file_basename", fh))
+            inv_c = fp.get("invoice_count", 0)
+            txn_c = fp.get("transaction_count", 0)
+            click.echo(f"    {fh[:16]}...  {label}  (发票{inv_c}张, 流水{txn_c}笔)")
+        if len(fps) > 5:
+            click.echo(f"    ... 等共 {len(fps)} 个")
+    click.echo(f"═══════════════════════════════════════════════════════════════")
+
+
+@audit.command("replay", help="将审计包的操作日志回放到指定会话（只追加历史，不还原数据）")
+@click.argument("audit_file")
+@click.option("--session", "-s", "session_name", help="目标会话，默认当前会话")
+def audit_replay(audit_file, session_name):
+    cfg, sm, sess = _load_session(session_name)
+    audit_mgr = AuditManager()
+    try:
+        result = audit_mgr.replay_log(audit_file, sess, sm)
+        sm.save(sess)
+        click.echo(f"[OK] 操作日志已回放到会话 '{sess.name}'")
+        click.echo(f"  回放条数      : {result['replayed_count']}")
+        click.echo(f"  当前历史总数  : {len(sess.history)}")
+    except Exception as e:
+        raise click.ClickException(f"回放失败: {e}")
+
+
+@audit.command("delete", help="删除审计包文件")
+@click.argument("audit_file")
+@click.option("--yes", is_flag=True, help="跳过确认")
+def audit_delete(audit_file, yes):
+    audit_mgr = AuditManager()
+    if not yes:
+        info = audit_mgr.info(audit_file)
+        disp = audit_file
+        if info:
+            disp = f"{info['file']} (会话: {info['original_session_name']}, 创建: {info['created_at']})"
+        click.confirm(f"确定删除审计包 {disp} ？此操作不可恢复", abort=True)
+    try:
+        audit_mgr.delete(audit_file)
+        click.echo(f"[OK] 审计包已删除")
+    except FileNotFoundError as e:
+        raise click.ClickException(str(e))
+
+
+@audit.command("check-sources", help="检查审计包与现有会话的导入来源重复情况")
+@click.argument("audit_file")
+@click.option("--session", "-s", "session_name", help="指定现有会话进行对比，默认当前会话")
+def audit_check_sources(audit_file, session_name):
+    cfg, sm, sess = _load_session(session_name)
+    audit_mgr = AuditManager()
+    try:
+        from .audit import AuditPackage
+        path = Path(audit_file)
+        if not path.exists():
+            path = audit_mgr.audit_dir / audit_file
+            if not path.exists() and not audit_file.endswith(".irecaudit"):
+                path = audit_mgr.audit_dir / (audit_file + ".irecaudit")
+
+        analysis = audit_mgr.analyze(audit_file, current_config=cfg)
+        audit_hashes = set(analysis.get("imported_file_hashes", []))
+        sess_hashes = set(sess.imported_files.keys())
+    except FileNotFoundError:
+        raise click.ClickException(f"审计包不存在: {audit_file}")
+    except ValueError as e:
+        raise click.ClickException(f"审计包读取失败: {e}")
+
+    common = audit_hashes & sess_hashes
+    click.echo(f"对比: 审计包 '{analysis.get('original_session_name', '?')}'  <->  会话 '{sess.name}'")
+    click.echo()
+    if common:
+        click.echo(f"[!!] 发现 {len(common)} 个重复导入来源（相同CSV已在两边导入过）:")
+        for h in common:
+            src_audit = "(审计包中标记缺失)"
+            src_sess = "(会话中标记缺失)"
+            for hh, label in sess.imported_files.items():
+                if hh == h:
+                    src_sess = label
+            src_audit = f"hash {h[:12]}..."
+            click.echo(f"    • {src_sess}  <->  {src_audit}")
+        click.echo()
+        click.echo(f"  这意味着如果两边独立做了匹配操作，数据可能出现不一致。")
+        click.echo(f"  建议: 导入后仔细核对未匹配列表和匹配记录。")
+    else:
+        click.echo(f"[OK] 未发现重复导入来源。")
+
+    audit_only = audit_hashes - sess_hashes
+    sess_only = sess_hashes - audit_hashes
+    click.echo()
+    click.echo(f"仅在审计包中导入的文件: {len(audit_only)} 个")
+    click.echo(f"仅在目标会话中导入的文件: {len(sess_only)} 个")
 
 
 # ============================================================
