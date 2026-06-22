@@ -10,6 +10,14 @@ import os
 import json
 import subprocess
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -28,7 +36,10 @@ for p in [sess_dir, rpt_json, rpt_dir]:
         shutil.rmtree(p, ignore_errors=True)
 
 
+_cli_failed = False
+
 def run(args):
+    global _cli_failed
     full = [sys.executable, "-m", "invoice_reconcile"] + args
     print(f"\n$ irec {' '.join(args)}")
     r = subprocess.run(full, capture_output=True, text=True, encoding="utf-8")
@@ -39,6 +50,8 @@ def run(args):
     if err:
         print(err)
     print(f"[exit={r.returncode}]")
+    if r.returncode != 0:
+        _cli_failed = True
     return r, out + "\n" + err
 
 
@@ -222,9 +235,17 @@ print("修复后待复核列表（show unmatched 输出）")
 print("=" * 70)
 run(["show", "unmatched"])
 
+if _cli_failed:
+    print("\n" + "=" * 70)
+    print("[FAILED] 存在 CLI 子进程非零退出码，参见上方 [exit=...] 标记")
+    print("=" * 70)
+    sys.exit(1)
+
 print("\n" + "=" * 70)
 print("[ALL PASSED] 边界场景回归通过：")
 print("  场景1：首个(T1+T2)超容差→继续遍历→命中(T3+T4)合格组合→自动核销成功")
 print("  场景2：唯一(T5+T6)超容差→全部候选不合格→保持在待复核（报表也包含它们）")
 print("  附加：会话重启持久化全部一致")
+print("  附加：所有 CLI 子进程 exit 0")
 print("=" * 70)
+sys.exit(0)
